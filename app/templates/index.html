@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-16 text-center">
+
+  <!-- Hero -->
+  <h1 class="text-4xl font-bold mb-4">
+    Dude Perfect Music Database
+  </h1>
+
+  <p class="text-gray-600 text-lg mb-10">
+    Explore songs, artists, and videos used across Dude Perfect content.
+  </p>
+
+  <!-- Primary actions -->
+  <div class="flex flex-col sm:flex-row justify-center gap-4 mb-14">
+    <a href="/songs"
+       class="inline-block px-6 py-3 bg-black text-white rounded hover:bg-gray-800 transition">
+      Search Songs
+    </a>
+
+    <a href="/artists"
+       class="inline-block px-6 py-3 border border-black rounded hover:bg-gray-100 transition">
+      Browse Artists
+    </a>
+
+    <a href="/videos"
+       class="inline-block px-6 py-3 border border-black rounded hover:bg-gray-100 transition">
+      Browse Videos
+    </a>
+  </div>
+
+  <!-- Optional context -->
+  <div class="text-sm text-gray-500 leading-relaxed max-w-2xl mx-auto">
+    <p>
+      This archive catalogs licensed music used in Dude Perfect videos,
+      with direct links between songs, artists, and appearances.
+    </p>
+  </div>
+
+</div>
+{% endblock %}

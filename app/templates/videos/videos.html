@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Video Search{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">
+  Video Search
+</h1>
+
+<form action="/videos" method="get"
+      class="flex flex-col sm:flex-row gap-2 sm:items-center">
+
+  <input
+    type="text"
+    name="q"
+    value="{{ query or '' }}"
+    placeholder="Search videos"
+    class="border border-gray-300 rounded px-3 py-2
+       w-full sm:w-64
+       focus:outline-none focus:ring-2 focus:ring-[#2EFCE6]"
+  >
+  <button
+    type="submit"
+    class="bg-[#1F1F1F] text-white px-4 py-2 rounded hover:text-[#2EFCE6]"
+  >
+    Search
+  </button>
+</form>
+
+{% if query %}
+  {% if results %}
+    <p class="mt-6 text-sm text-gray-600">
+      Found {{ results|length }} result{{ '' if results|length == 1 else 's' }}:
+    </p>
+
+    <ul class="mt-3 space-y-3">
+      {% for video in results %}
+        <li class="border border-gray-200 rounded p-3 hover:bg-gray-50">
+          <a
+            href="/videos/{{ video.id }}"
+            class="font-semibold hover:text-[#2EFCE6]"
+          >
+            {{ video.title }}
+          </a>
+          <div class="text-sm text-gray-600">
+            {{ video.song_count }} song{{ '' if video.song_count == 1 else 's' }} used
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="mt-6 text-sm text-gray-600 italic">
+      No videos matched “{{ query }}”.
+    </p>
+  {% endif %}
+{% endif %}
+{% endblock %}

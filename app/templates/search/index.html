@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-6">Search</h1>
+
+<div class="space-y-4">
+  <a href="/songs" class="block border rounded p-4 hover:border-[#2EFCE6]">
+    <h2 class="font-semibold">Songs</h2>
+    <p class="text-sm text-gray-600">Search by song title</p>
+  </a>
+
+  <a href="/artists" class="block border rounded p-4 hover:border-[#2EFCE6]">
+    <h2 class="font-semibold">Artists</h2>
+    <p class="text-sm text-gray-600">Search by artist name</p>
+  </a>
+
+  <a href="/videos" class="block border rounded p-4 hover:border-[#2EFCE6]">
+    <h2 class="font-semibold">Videos</h2>
+    <p class="text-sm text-gray-600">Search by video title</p>
+  </a>
+</div>
+{% endblock %}

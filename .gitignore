@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# Virtualenvs
+venv/
+.env/
+.envrc
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+
+# n8n / temp
+*.zip

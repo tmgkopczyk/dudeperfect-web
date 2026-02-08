@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Dude Perfect Music Database{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-[#F9FAFB] text-[#1F1F1F] min-h-screen flex flex-col">
+
+  <!-- Header / Nav -->
+  <header class="bg-[#1F1F1F] text-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
+
+      <!-- Brand -->
+      <a href="/" class="font-semibold text-[#2EFCE6] hover:text-[#22D3C5]">
+        Dude Perfect Music DB
+      </a>
+
+      <!-- Nav links -->
+      <nav class="ml-auto flex gap-4 sm:gap-6 text-sm sm:text-base">
+        <a href="/songs" class="hover:text-[#2EFCE6]">Songs</a>
+        <a href="/artists" class="hover:text-[#2EFCE6]">Artists</a>
+        <a href="/videos" class="hover:text-[#2EFCE6]">Videos</a>
+        <a href="/contact" class="text-gray-400 hover:text-[#2EFCE6]">
+          Contact
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="flex-grow">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-200 bg-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-sm text-gray-500 text-center space-y-2">
+      <p>
+        Fan-run project. Not affiliated with Dude Perfect.
+      </p>
+      <p>
+        <a href="/contact" class="underline hover:text-gray-700">
+          Questions, corrections, or suggestions?
+        </a>
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>

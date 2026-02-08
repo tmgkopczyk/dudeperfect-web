@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ song.title }}{% endblock %}
+
+{% block content %}
+
+<section class="space-y-6">
+  <a href="/songs"
+   class="text-sm text-neutral-500 hover:text-[#2EFCE6]">
+  ← Back to songs
+</a>
+
+  <!-- Title block -->
+  <header class="space-y-1">
+    <h1 class="text-3xl font-semibold text-neutral-900">
+      {{ song.title }}
+    </h1>
+
+    {% if song.artists %}
+      <p class="text-lg text-neutral-700">
+        by {{ song.artists | join(", ") }}
+      </p>
+    {% endif %}
+  </header>
+
+  <hr class="border-neutral-300">
+
+  <!-- Usage section -->
+  <section class="space-y-3">
+    <h2 class="text-xl font-medium text-neutral-900">
+      Used in
+    </h2>
+
+    {% if song.videos %}
+      <ul class="list-disc list-inside space-y-1 text-neutral-800">
+        {% for video in song.videos %}
+          <li>
+            <a
+              href="/videos/{{ video.id }}"
+              class="hover:text-[#2EFCE6]"
+            >
+              {{ video.title }}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-neutral-600 italic">
+        No videos currently linked to this song.
+      </p>
+    {% endif %}
+  </section>
+
+  <hr class="border-neutral-300">
+
+  <!-- Metadata -->
+  <section class="text-xs text-neutral-500 space-y-1">
+    {% if song.spotify_track_id %}
+      <div>
+        <span class="font-medium text-neutral-700">
+          Spotify Track ID:
+        </span>
+        <code class="ml-1 text-neutral-800">
+          {{ song.spotify_track_id }}
+        </code>
+      </div>
+    {% endif %}
+  </section>
+
+</section>
+
+{% endblock %}
