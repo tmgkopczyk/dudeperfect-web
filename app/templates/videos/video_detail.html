@@ -6,11 +6,13 @@
 <section class="space-y-6">
 
   <!-- Back link -->
-  <a href="/videos"
-     class="text-sm text-neutral-500 hover:text-[#2EFCE6]">
-    ← Back to videos
-  </a>
-
+<button
+  type="button"
+  onclick="if (history.length > 1) history.back(); else window.location='/'"
+  class="text-sm text-neutral-500 hover:text-[#2EFCE6]"
+>
+  ← Back
+</button>>
   <!-- Title -->
   <header class="space-y-1">
     <h1 class="text-3xl font-semibold text-neutral-900">
