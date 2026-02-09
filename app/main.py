@@ -107,6 +107,39 @@ def song_detail_page(request: Request, song_id: int):
         {"request": request, "song": song}
     )
 
+@pages_router.get("/videos/categories", response_class=HTMLResponse)
+def video_categories_page(request: Request):
+    categories = list_video_categories()
+    return templates.TemplateResponse(
+        "videos/categories/index.html",
+        {"request": request, "categories": categories}
+    )
+
+
+@pages_router.get("/videos/categories/{slug}", response_class=HTMLResponse)
+def video_category_detail_page(
+    request: Request,
+    slug: str,
+    q: str | None = Query(default=None, max_length=100)
+):
+    category = get_video_category_by_slug(slug)
+    if not category:
+        raise HTTPException(status_code=404)
+
+    q = q.strip() if q else None
+    videos = list_videos_for_category(category["id"],q=q)
+
+    return templates.TemplateResponse(
+        "videos/categories/category_detail.html",
+        {
+            "request": request,
+            "category": category,
+            "videos": videos,
+            "query": q
+        }
+    )
+
+
 @api_router.get("/search", tags=["Search"])
 def api_search(q: str, limit: int = 50):
     if not q or len(q.strip()) < 1:

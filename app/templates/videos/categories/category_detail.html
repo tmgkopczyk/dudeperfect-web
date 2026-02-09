@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ category.title }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-start gap-4">
+  <div>
+    <h1 class="text-2xl font-semibold">{{ category.title }}</h1>
+    {% if category.description %}
+      <p class="text-sm text-gray-600 mt-2">{{ category.description }}</p>
+    {% endif %}
+  </div>
+
+  <a href="/videos/categories"
+     class="text-sm text-gray-500 hover:text-[#2EFCE6]">
+    All categories →
+  </a>
+</div>
+
+<form method="get" class="mt-6 flex gap-2">
+  <input
+    type="text"
+    name="q"
+    value="{{ query or '' }}"
+    placeholder="Search in {{ category.title }}"
+    class="border rounded px-3 py-2 w-full max-w-sm"
+  >
+  <button class="px-4 py-2 bg-[#1F1F1F] text-white rounded hover:text-[#2EFCE6]">
+    Search
+  </button>
+</form>
+
+<ul class="mt-6 space-y-3">
+  {% for v in videos %}
+    <li class="border rounded p-3 hover:bg-gray-50">
+      <a href="/videos/{{ v.id }}"
+         class="font-semibold hover:text-[#2EFCE6]">
+        {{ v.title }}
+      </a>
+      <div class="text-sm text-gray-600">
+        {{ v.song_count }} song{{ '' if v.song_count == 1 else 's' }}
+        {% if v.published_at %} • {{ v.published_at.strftime('%Y-%m-%d') }}{% endif %}
+      </div>
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

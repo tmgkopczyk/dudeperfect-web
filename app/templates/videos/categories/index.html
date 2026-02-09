@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Video Categories{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-6">Video Categories</h1>
+
+<ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for c in categories %}
+    <li class="border rounded p-4 hover:bg-gray-50">
+      <a href="/videos/categories/{{ c.slug }}"
+         class="font-semibold hover:text-[#2EFCE6]">
+        {{ c.title }}
+      </a>
+      {% if c.description %}
+        <p class="text-sm text-gray-600 mt-2">{{ c.description }}</p>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

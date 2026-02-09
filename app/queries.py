@@ -354,4 +354,53 @@ def get_artist_detail(artist_id: int):
 
     return artist
 
+def list_video_categories():
+    sql = text("""
+      SELECT slug, title, description
+      FROM video_categories
+      WHERE is_active = true
+      ORDER BY sort_order, title
+    """)
+    with engine.connect() as conn:
+        return conn.execute(sql).mappings().all()
 
+
+def get_video_category_by_slug(slug: str):
+    sql = text("""
+      SELECT id, slug, title, description
+      FROM video_categories
+      WHERE slug = :slug AND is_active = true
+      LIMIT 1
+    """)
+    with engine.connect() as conn:
+        return conn.execute(sql, {"slug": slug}).mappings().first()
+
+def list_videos_for_category(category_id: int, q: str | None = None):
+    sql = text("""
+        SELECT
+          v.id,
+          v.title,
+          v.published_at,
+          COUNT(DISTINCT vs.song_id) AS song_count
+        FROM video_category_videos vcv
+        JOIN videos v ON v.id = vcv.video_id
+        LEFT JOIN video_songs vs ON vs.video_id = v.id
+        WHERE vcv.category_id = :category_id
+          AND (
+            CAST(:q AS text) IS NULL
+            OR v.title ILIKE '%' || :q || '%'
+          )
+        GROUP BY v.id, vcv.rank
+        ORDER BY
+          vcv.rank NULLS LAST,
+          v.published_at DESC NULLS LAST,
+          v.id DESC
+    """)
+
+    params = {
+        "category_id": category_id,
+        "q": q.strip() if q and q.strip() else None
+    }
+
+    with engine.connect() as conn:
+        return conn.execute(sql, params).mappings().all()
