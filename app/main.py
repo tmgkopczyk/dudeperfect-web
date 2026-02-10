@@ -24,6 +24,20 @@ api_router   = APIRouter(prefix="/api")
 
 templates = Jinja2Templates(directory="app/templates")
 
+from fastapi.responses import JSONResponse
+from app.queries import get_battle_view
+
+@app.get("/debug/battles/{video_id}")
+def debug_battle_view(video_id: int):
+    data = get_battle_view(video_id)
+    if not data:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Not a battle"}
+        )
+    return data
+
+
 @pages_router.post("/contact/submit",response_class=HTMLResponse)
 def contact_submit(
     request: Request,
@@ -233,16 +247,19 @@ def videos_page(request: Request, q: str | None = None):
 def video_detail_page(request: Request, video_id: int):
     video = get_video_detail_page(video_id)
 
-    if not video:
-        raise HTTPException(status_code=404)
+    battle_data = get_battle_view(video_id)
+    battle = battle_data["battle"] if battle_data else None
+
 
     return templates.TemplateResponse(
         "videos/video_detail.html",
         {
             "request": request,
-            "video": video
-        }
+            "video": video,
+            "battle": battle,  # 👈 THIS is what unlocks the template
+        },
     )
+
 
 app.include_router(pages_router)
 app.include_router(api_router)

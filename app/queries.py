@@ -1,6 +1,125 @@
 from sqlalchemy import text
 from .db import engine
 
+def get_battle_view(video_id: int):
+    with engine.connect() as conn:
+
+        # 1. Load battle + video
+        battle_row = conn.execute(text("""
+            SELECT
+              b.id AS battle_id,
+              b.format,
+              b.notes,
+              v.id AS video_id,
+              v.title,
+              v.youtube_video_id,
+              v.published_at
+            FROM battles b
+            JOIN videos v ON v.id = b.video_id
+            WHERE v.id = :video_id
+            LIMIT 1
+        """), {"video_id": video_id}).mappings().first()
+
+        if not battle_row:
+            return None
+
+        battle_id = battle_row["battle_id"]
+
+        # 2. Players
+        players = conn.execute(text("""
+            SELECT id, name, team, display_order
+            FROM battle_players
+            WHERE battle_id = :battle_id
+            ORDER BY display_order
+        """), {"battle_id": battle_id}).mappings().all()
+
+        player_lookup = {
+            p["id"]: {
+                "id": p["id"],
+                "name": p["name"],
+                "team": p["team"]
+            }
+            for p in players
+        }
+
+        # 3. Events (timeline backbone)
+        events = conn.execute(text("""
+            SELECT id, event_order, name, event_type
+            FROM battle_events
+            WHERE battle_id = :battle_id
+            ORDER BY event_order
+        """), {"battle_id": battle_id}).mappings().all()
+
+        timeline = {
+            e["id"]: {
+                "event_id": e["id"],
+                "order": e["event_order"],
+                "name": e["name"],
+                "type": e["event_type"],
+                "results": []
+            }
+            for e in events
+        }
+
+        # 4. Results
+        results = conn.execute(text("""
+            SELECT
+              r.event_id,
+              r.player_id,
+              r.metric,
+              r.value,
+              r.rank,
+              p.name AS player_name
+            FROM battle_results r
+            JOIN battle_players p ON p.id = r.player_id
+            WHERE r.battle_id = :battle_id
+        """), {"battle_id": battle_id}).mappings().all()
+
+        for r in results:
+            if r["metric"] == "status" and r["event_id"] in timeline:
+                timeline[r["event_id"]]["results"].append({
+                    "player_id": r["player_id"],
+                    "player": r["player_name"],
+                    "status": r["value"],
+                    "rank": r["rank"]
+                })
+
+        # 5. Final standings
+                # 5. Final standings
+        standings = conn.execute(text("""
+            SELECT
+              p.name,
+              r.rank
+            FROM battle_results r
+            JOIN battle_players p ON p.id = r.player_id
+            WHERE r.battle_id = :battle_id
+              AND r.metric = 'placement'
+            ORDER BY r.rank
+        """), {"battle_id": battle_id}).mappings().all()
+
+        video = {
+            "id": battle_row["video_id"],
+            "title": battle_row["title"],
+            "youtube_video_id": battle_row["youtube_video_id"],
+            "published_at": battle_row["published_at"],
+        }
+
+        battle = {
+            "id": battle_row["battle_id"],
+            "format": battle_row["format"],
+            "notes": battle_row["notes"],
+            "players": players,
+            "timeline": list(timeline.values()),
+            "final_standings": standings,
+        }
+
+        return {
+            "video": video,
+            "battle": battle,
+        }
+
+
+
 
 def get_song_detail(song_id: int):
     sql = text("""SELECT
@@ -61,18 +180,18 @@ ORDER BY sa.artist_order, v.published_at;
 def search_songs(query: str, limit: int = 50):
     sql = text("""
         SELECT
-	 s.id,
-  	 s.title,
-  	 s.spotify_track_id,
-  	 array_agg(a.name ORDER BY sa.artist_order) AS artists
-	FROM songs s
-	JOIN song_artists sa ON sa.song_id = s.id
-	JOIN artists a ON a.id = sa.artist_id
-	WHERE unaccent(lower(s.title))
-      	      LIKE unaccent(lower(:q))
-	GROUP BY s.id
-	ORDER BY s.title
-	LIMIT :limit
+     s.id,
+       s.title,
+       s.spotify_track_id,
+       array_agg(a.name ORDER BY sa.artist_order) AS artists
+    FROM songs s
+    JOIN song_artists sa ON sa.song_id = s.id
+    JOIN artists a ON a.id = sa.artist_id
+    WHERE unaccent(lower(s.title))
+                LIKE unaccent(lower(:q))
+    GROUP BY s.id
+    ORDER BY s.title
+    LIMIT :limit
     """)
 
     with engine.connect() as conn:
