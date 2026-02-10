@@ -1,20 +1,30 @@
+from collections import defaultdict
 from sqlalchemy import text
 from .db import engine
 
 def get_battle_view(video_id: int):
     with engine.connect() as conn:
 
-        # 1. Load battle + video
+        # --------------------------------------------------
+        # 1. Battle + Definition + Video
+        # --------------------------------------------------
         battle_row = conn.execute(text("""
             SELECT
               b.id AS battle_id,
               b.format,
-              b.notes,
+              b.definition_id,
+
+              d.name        AS definition_name,
+              d.description AS definition_description,
+              d.total_rounds,
+              d.notes       AS definition_notes,
+
               v.id AS video_id,
               v.title,
               v.youtube_video_id,
               v.published_at
             FROM battles b
+            JOIN battle_definitions d ON d.id = b.definition_id
             JOIN videos v ON v.id = b.video_id
             WHERE v.id = :video_id
             LIMIT 1
@@ -25,24 +35,19 @@ def get_battle_view(video_id: int):
 
         battle_id = battle_row["battle_id"]
 
+        # --------------------------------------------------
         # 2. Players
+        # --------------------------------------------------
         players = conn.execute(text("""
-            SELECT id, name, team, display_order
+            SELECT id, name, team, role, is_team, display_order
             FROM battle_players
             WHERE battle_id = :battle_id
             ORDER BY display_order
         """), {"battle_id": battle_id}).mappings().all()
 
-        player_lookup = {
-            p["id"]: {
-                "id": p["id"],
-                "name": p["name"],
-                "team": p["team"]
-            }
-            for p in players
-        }
-
-        # 3. Events (timeline backbone)
+        # --------------------------------------------------
+        # 3. Events
+        # --------------------------------------------------
         events = conn.execute(text("""
             SELECT id, event_order, name, event_type
             FROM battle_events
@@ -50,75 +55,115 @@ def get_battle_view(video_id: int):
             ORDER BY event_order
         """), {"battle_id": battle_id}).mappings().all()
 
-        timeline = {
-            e["id"]: {
-                "event_id": e["id"],
-                "order": e["event_order"],
-                "name": e["name"],
-                "type": e["event_type"],
-                "results": []
-            }
-            for e in events
-        }
+        # --------------------------------------------------
+        # 4. Results grouped by event
+        # --------------------------------------------------
+        results_by_event = defaultdict(list)
 
-        # 4. Results
         results = conn.execute(text("""
             SELECT
               r.event_id,
-              r.player_id,
               r.metric,
               r.value,
               r.rank,
-              p.name AS player_name
+              p.name AS player
             FROM battle_results r
             JOIN battle_players p ON p.id = r.player_id
             WHERE r.battle_id = :battle_id
         """), {"battle_id": battle_id}).mappings().all()
 
         for r in results:
-            if r["metric"] == "status" and r["event_id"] in timeline:
-                timeline[r["event_id"]]["results"].append({
-                    "player_id": r["player_id"],
-                    "player": r["player_name"],
-                    "status": r["value"],
-                    "rank": r["rank"]
-                })
+            results_by_event[r["event_id"]].append(r)
 
+        # --------------------------------------------------
         # 5. Final standings
-                # 5. Final standings
+        # --------------------------------------------------
         standings = conn.execute(text("""
             SELECT
-              p.name,
+              p.name AS player,
               r.rank
             FROM battle_results r
             JOIN battle_players p ON p.id = r.player_id
             WHERE r.battle_id = :battle_id
-              AND r.metric = 'placement'
+              AND r.metric = 'final'
             ORDER BY r.rank
         """), {"battle_id": battle_id}).mappings().all()
 
-        video = {
-            "id": battle_row["video_id"],
-            "title": battle_row["title"],
-            "youtube_video_id": battle_row["youtube_video_id"],
-            "published_at": battle_row["published_at"],
-        }
+        # --------------------------------------------------
+        # 6. Build YAML-style timeline
+        # --------------------------------------------------
+        timeline = []
+        current_round = None
 
-        battle = {
-            "id": battle_row["battle_id"],
-            "format": battle_row["format"],
-            "notes": battle_row["notes"],
-            "players": players,
-            "timeline": list(timeline.values()),
-            "final_standings": standings,
-        }
+        for e in events:
 
+            if e["event_type"] == "round":
+                current_round = {
+                    "type": "round",
+                    "name": e["name"],
+                    "entries": [],
+                    "winner": None
+                }
+                timeline.append(current_round)
+
+            elif e["event_type"] in ("match", "title_fight") and current_round:
+                winner = None
+                for r in results_by_event.get(e["id"], []):
+                    if r["metric"] == "result" and r["value"] == "win":
+                        winner = r["player"]
+
+                current_round["entries"].append({
+                    "type": e["event_type"],
+                    "label": e["name"],
+                    "winner": winner
+                })
+
+            elif e["event_type"] == "elimination" and current_round:
+                for r in results_by_event.get(e["id"], []):
+                    if r["metric"] == "status" and r["value"] == "eliminated":
+                        current_round["entries"].append({
+                            "type": "elimination",
+                            "player": r["player"]
+                        })
+
+            elif e["event_type"] == "finale":
+                timeline.append({
+                    "type": "finale",
+                    "name": e["name"],
+                    "results": standings
+                })
+
+            # Round winners (e.g. scooter race)
+            for r in results_by_event.get(e["id"], []):
+                if r["metric"] == "round_win" and current_round:
+                    current_round["winner"] = r["player"]
+
+        # --------------------------------------------------
+        # 7. Assemble response
+        # --------------------------------------------------
         return {
-            "video": video,
-            "battle": battle,
+            "video": {
+                "id": battle_row["video_id"],
+                "title": battle_row["title"],
+                "youtube_video_id": battle_row["youtube_video_id"],
+                "published_at": battle_row["published_at"],
+            },
+            "battle": {
+                "id": battle_id,
+                "format": battle_row["format"],
+                "definition": {
+                    "name": battle_row["definition_name"],
+                    "description": battle_row["definition_description"],
+                    "total_rounds": battle_row["total_rounds"],
+                    "notes": battle_row["definition_notes"],
+                },
+                "players": players,
+                "teams": [],
+                "has_teams": False,
+                "timeline": timeline,
+                "final_standings": standings,
+            }
         }
-
-
 
 
 def get_song_detail(song_id: int):
