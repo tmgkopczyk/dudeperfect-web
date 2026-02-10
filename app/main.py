@@ -247,16 +247,15 @@ def videos_page(request: Request, q: str | None = None):
 def video_detail_page(request: Request, video_id: int):
     video = get_video_detail_page(video_id)
 
-    battle_data = get_battle_view(video_id)
-    battle = battle_data["battle"] if battle_data else None
+    #battle_data = get_battle_view(video_id)
+    #battle = battle_data["battle"] if battle_data else None
 
 
     return templates.TemplateResponse(
         "videos/video_detail.html",
         {
             "request": request,
-            "video": video,
-            "battle": battle,  # 👈 THIS is what unlocks the template
+            "video": video
         },
     )
 
