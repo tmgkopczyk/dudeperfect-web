@@ -5,6 +5,9 @@ from fastapi.templating import Jinja2Templates
 from fastapi import HTTPException
 from fastapi import APIRouter
 from .queries import *
+from .sitemap import router as sitemap_router
+from .robots import router as robots_router
+
 
 N8N_WEBHOOK_URL = "https://n8n.khomeserver.com/webhook/dp-contact-7b4f92"
 
@@ -261,4 +264,5 @@ def video_detail_page(request: Request, video_id: int):
 
 app.include_router(pages_router)
 app.include_router(api_router)
-
+app.include_router(sitemap_router)
+app.include_router(robots_router)

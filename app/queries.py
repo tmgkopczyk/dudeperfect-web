@@ -61,10 +61,12 @@ def get_battle_view(video_id: int):
                     name,
                     status,
                     placement,
+                    score,
                     notes
                     FROM battle_round_participants
                     WHERE battle_round_id = :round_id
                     ORDER BY placement NULLS LAST, name
+
                 """),
                 {"round_id": r["id"]}
             ).mappings().all()
