@@ -25,7 +25,7 @@ api_router   = APIRouter(prefix="/api")
 templates = Jinja2Templates(directory="app/templates")
 
 from fastapi.responses import JSONResponse
-from app.queries import get_battle_view
+#from app.queries import get_battle_view
 
 @app.get("/debug/battles/{video_id}")
 def debug_battle_view(video_id: int):
@@ -246,18 +246,17 @@ def videos_page(request: Request, q: str | None = None):
 @pages_router.get("/videos/{video_id}", response_class=HTMLResponse)
 def video_detail_page(request: Request, video_id: int):
     video = get_video_detail_page(video_id)
-
-    #battle_data = get_battle_view(video_id)
-    #battle = battle_data["battle"] if battle_data else None
-
+    battle = get_battle_view(video_id)
 
     return templates.TemplateResponse(
         "videos/video_detail.html",
         {
             "request": request,
-            "video": video
+            "video": video,
+            "battle": battle,
         },
     )
+
 
 
 app.include_router(pages_router)

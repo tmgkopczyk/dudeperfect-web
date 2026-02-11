@@ -30,6 +30,124 @@
     {% endif %}
   </header>
 
+  {% if battle %}
+
+  <hr>
+
+  <!-- Players -->
+  <section class="space-y-3">
+    <h3 class="text-lg font-medium text-neutral-900">
+      Players
+    </h3>
+
+    <ul class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+      {% for team in battle.teams %}
+        {% for player in team.players %}
+          <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
+            {% if player.is_guest %}
+              <span title="Guest">⭐</span>
+            {% endif %}
+            {{ player.name }}
+          </li>
+        {% endfor %}
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if battle.description or battle.notes %}
+  <hr>
+
+  <!-- Battle Overview -->
+  <section class="space-y-2">
+    <h3 class="text-lg font-medium text-neutral-900">
+      Battle Overview
+    </h3>
+
+    {% if battle.description %}
+      <p class="text-sm text-neutral-700">
+        {{ battle.description }}
+      </p>
+    {% endif %}
+
+    {% if battle.notes %}
+      <p class="text-sm text-neutral-600 italic">
+        {{ battle.notes }}
+      </p>
+    {% endif %}
+  </section>
+  {% endif %}
+  {% if battle.winner %}
+  <div class="mt-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+    <span class="text-lg">🏆</span>
+    <span class="text-sm font-semibold text-green-700">
+      Winner: {{ battle.winner }}
+    </span>
+  </div>
+  {% endif %}
+
+
+  {% if battle.timeline %}
+  <hr>
+
+  <section class="space-y-4">
+    <h3 class="text-lg font-medium text-neutral-900">
+      Battle Rounds
+    </h3>
+
+    {% for round in battle.timeline %}
+      <div class="border rounded-lg p-4 space-y-3 bg-white">
+
+        <div class="font-semibold text-neutral-800">
+          {{ round.name }}
+        </div>
+
+        <ul class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+          {% for p in round.results %}
+          <li class="flex flex-col border rounded px-2 py-1 bg-white">
+
+            <!-- Name + status -->
+            <div class="flex justify-between items-center">
+              <span class="font-medium">{{ p.name }}</span>
+
+              {% if p.status %}
+                <span class="text-xs italic
+                  {% if p.status == 'winner' %}text-green-700
+                  {% elif p.status == 'runner_up' %}text-blue-600
+                  {% else %}text-neutral-500
+                  {% endif %}">
+                  {{ p.status | replace('_',' ') | title }}
+                </span>
+              {% endif %}
+            </div>
+
+            <!-- Score -->
+            {% if p.score is defined and p.score is not none %}
+              <div class="text-xs text-neutral-600">
+                {{ p.score|round(2) }}
+                {% if round.score_label %} {{ round.score_label }}{% endif %}
+              </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if p.notes %}
+              <div class="text-xs text-neutral-500 italic">
+                {{ p.notes }}
+              </div>
+            {% endif %}
+
+          </li>
+          {% endfor %}
+
+        </ul>
+
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+
+  {% endif %}
+
   <hr class="border-neutral-300">
 
   <!-- Songs section -->
