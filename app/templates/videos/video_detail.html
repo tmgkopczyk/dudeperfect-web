@@ -54,7 +54,7 @@
     </ul>
   </section>
 
-  {% if battle.description or battle.notes %}
+  {% if battle.description or battle.notes or battle.rules %}
   <hr>
 
   <!-- Battle Overview -->
@@ -68,6 +68,16 @@
         {{ battle.description }}
       </p>
     {% endif %}
+
+    {% if battle.rules %}
+    <div class="text-sm text-neutral-700">
+      <span class="font-semibold">Rules:</span>
+        <div class="mt-1">
+          {{ battle.rules }}
+        </div>
+    </div>
+    {% endif %}
+
 
     {% if battle.notes %}
       <p class="text-sm text-neutral-600 italic">

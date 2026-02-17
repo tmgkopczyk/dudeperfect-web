@@ -1,21 +1,23 @@
 from collections import defaultdict
 from sqlalchemy import text
 from .db import engine
-
 def get_battle_view(video_id: int):
     with engine.connect() as conn:
+
+        # =========================
+        # 1️⃣ Load battle + video
+        # =========================
         battle_row = conn.execute(
             text("""
                 SELECT
-                b.id AS battle_id,
-                b.notes,
-                b.winner,
-                d.name AS definition_name,
-                d.description,
-                v.id AS video_id,
-                v.title
+                    b.id AS battle_id,
+                    b.description,
+                    b.rules,
+                    b.notes,
+                    b.winner,
+                    v.id AS video_id,
+                    v.title
                 FROM battles b
-                JOIN battle_definitions d ON d.id = b.definition_id
                 JOIN videos v ON v.id = b.video_id
                 WHERE v.id = :video_id
                 LIMIT 1
@@ -23,33 +25,40 @@ def get_battle_view(video_id: int):
             {"video_id": video_id}
         ).mappings().fetchone()
 
-
         if not battle_row:
             return None
 
+        # =========================
+        # 2️⃣ Players
+        # =========================
         players = conn.execute(
             text("""
                 SELECT
-                  name,
-                  is_guest,
-                  notes
+                    name,
+                    is_guest,
+                    notes
                 FROM battle_players
                 WHERE battle_id = :battle_id
                 ORDER BY is_guest, name
             """),
             {"battle_id": battle_row["battle_id"]}
         ).mappings().all()
+
+        # =========================
+        # 3️⃣ Rounds
+        # =========================
         rounds = conn.execute(
-        text("""
-            SELECT
-            br.id,
-            br.round_order,
-            br.name
-            FROM battle_rounds br
-            WHERE br.battle_id = :battle_id
-            ORDER BY br.round_order
-        """),
-        {"battle_id": battle_row["battle_id"]}
+            text("""
+                SELECT
+                    br.id,
+                    br.round_order,
+                    br.name,
+                    br.score_label
+                FROM battle_rounds br
+                WHERE br.battle_id = :battle_id
+                ORDER BY br.round_order
+            """),
+            {"battle_id": battle_row["battle_id"]}
         ).mappings().all()
 
         timeline = []
@@ -57,33 +66,41 @@ def get_battle_view(video_id: int):
         for r in rounds:
             results = conn.execute(
                 text("""
-                    SELECT
-                    name,
-                    status,
-                    placement,
-                    score,
-                    notes
-                    FROM battle_round_participants
-                    WHERE battle_round_id = :round_id
-                    ORDER BY placement NULLS LAST, name
+                        SELECT
+                            COALESCE(bp.name, bt.name) AS name,
+                            brp.status,
+                            brp.placement,
+                            brp.score,
+                            brp.notes
+                        FROM battle_round_participants brp
+                        LEFT JOIN battle_players bp
+                            ON brp.battle_player_id = bp.id
+                        LEFT JOIN battle_teams bt
+                            ON brp.battle_team_id = bt.id
+                        WHERE brp.battle_round_id = :round_id
+                        ORDER BY brp.placement NULLS LAST,
+                                COALESCE(bp.name, bt.name)
+                    """),
+                    {"round_id": r["id"]}
+                ).mappings().all()
 
-                """),
-                {"round_id": r["id"]}
-            ).mappings().all()
 
             timeline.append({
                 "name": r["name"],
+                "score_label": r["score_label"],
                 "results": [dict(x) for x in results]
             })
 
-
-
-    # 👇 SHAPE DATA FOR THE TEMPLATE
+    # =========================
+    # 4️⃣ Shape data for template
+    # =========================
     return {
         "id": battle_row["battle_id"],
-        "winner": battle_row["winner"],   # 👈 THIS is the key line
+        "title": battle_row["title"],
+        "winner": battle_row["winner"],
         "format": "standard",
         "description": battle_row["description"],
+        "rules": battle_row["rules"],
         "notes": battle_row["notes"],
         "teams": [
             {
@@ -94,6 +111,7 @@ def get_battle_view(video_id: int):
         "timeline": timeline,
         "final_standings": []
     }
+
 
 
 
