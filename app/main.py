@@ -245,6 +245,10 @@ def videos_page(request: Request, q: str | None = None):
         }
     )
 
+@app.get("/debug/overtime/{video_id}")
+def debug_overtime(video_id: int):
+    return get_overtime_view(video_id)
+
 
 @pages_router.get("/videos/{video_id}", response_class=HTMLResponse)
 def video_detail_page(request: Request, video_id: int):

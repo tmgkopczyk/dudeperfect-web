@@ -117,79 +117,201 @@ def get_battle_view(video_id: int):
 def get_overtime_view(video_id: int):
     with engine.connect() as conn:
 
-        segment = conn.execute(
+        # 1️⃣ Find episode
+        episode = conn.execute(
             text("""
-                SELECT id, episode_number, title
-                FROM overtime_segments
+                SELECT id
+                FROM overtime_episodes
                 WHERE video_id = :video_id
                 LIMIT 1
             """),
             {"video_id": video_id}
-        ).mappings().fetchone()
+        ).mappings().first()
 
-        if not segment:
+        if not episode:
             return None
 
-        rows = conn.execute(
+        # 2️⃣ Get segments for this episode
+        segments = conn.execute(
             text("""
                 SELECT
-                    osi.id AS item_id,
-                    osi.item_name,
-                    p.name AS presenter_name
-                FROM overtime_segment_items osi
-                JOIN players p ON p.id = osi.presenter_id
-                WHERE osi.segment_id = :segment_id
-                ORDER BY osi.id
+                    os.id,
+                    st.name AS segment_type
+                FROM overtime_segments os
+                JOIN overtime_segment_types st
+                  ON st.id = os.segment_type_id
+                WHERE os.episode_id = :episode_id
+                ORDER BY os.segment_order NULLS LAST, os.id
             """),
-            {"segment_id": segment["id"]}
+            {"episode_id": episode["id"]}
         ).mappings().all()
 
-        items = []
+        if not segments:
+            return None
 
-        for r in rows:
-            votes = conn.execute(
-                text("""
-                    SELECT
-                        pl.name AS voter_name,
-                        osiv.vote
-                    FROM overtime_segment_item_votes osiv
-                    JOIN players pl ON pl.id = osiv.voter_id
-                    WHERE osiv.item_id = :item_id
-                """),
-                {"item_id": r["item_id"]}
-            ).mappings().all()
+        formatted_segments = []
 
-            vote_list = [dict(v) for v in votes]
-            vote_list.sort(
-                key=lambda v: (v["voter_name"] != r["presenter_name"], v["voter_name"])
-            )
+        for segment in segments:
 
+            segment_id = segment["id"]
+            segment_type = segment["segment_type"]
 
-            # 🔥 Compute overall dynamically
-            vote_values = [v["vote"] for v in vote_list if v["vote"]]
-            counts = Counter(vote_values)
+            # =========================
+            # 🎬 COOL NOT COOL
+            # =========================
+            if segment_type == "Cool Not Cool":
 
-            overall = None
-            if counts.get("cool", 0) > counts.get("not_cool", 0):
-                overall = "cool"
-            elif counts.get("not_cool", 0) > counts.get("cool", 0):
-                overall = "not_cool"
+                items = conn.execute(
+                    text("""
+                        SELECT
+                            i.id,
+                            i.item_name,
+                            p.name AS presenter_name
+                        FROM overtime_segment_items i
+                        LEFT JOIN players p
+                          ON p.id = i.presenter_id
+                        WHERE i.segment_id = :segment_id
+                        ORDER BY i.id
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().all()
 
-            items.append({
-                "presenter_name": r["presenter_name"],
-                "item_name": r["item_name"],
-                "votes": vote_list,
-                "overall": overall
-            })
+                formatted_items = []
+
+                for item in items:
+                    votes = conn.execute(
+                        text("""
+                            SELECT
+                                pl.name AS voter_name,
+                                v.vote
+                            FROM overtime_segment_item_votes v
+                            JOIN players pl
+                              ON pl.id = v.voter_id
+                            WHERE v.item_id = :item_id
+                            ORDER BY pl.name
+                        """),
+                        {"item_id": item["id"]}
+                    ).mappings().all()
+
+                    vote_values = [v["vote"] for v in votes]
+                    cool_count = vote_values.count("cool")
+                    not_cool_count = vote_values.count("not_cool")
+
+                    overall = None
+                    if cool_count > not_cool_count:
+                        overall = "cool"
+                    elif not_cool_count > cool_count:
+                        overall = "not_cool"
+                    elif cool_count == not_cool_count and cool_count > 0:
+                        overall = "both"
+
+                    formatted_items.append({
+                        "item_name": item["item_name"],
+                        "presenter_name": item["presenter_name"],
+                        "votes": [dict(v) for v in votes],
+                        "overall": overall
+                    })
+
+                formatted_segments.append({
+                    "segment_type": segment_type,
+                    "items": formatted_items
+                })
+
+            # =========================
+            # 🎡 WHEEL SEGMENT
+            # =========================
+            elif segment_type in ("Wheel Unfortunate", "Wheel Fortunate"):
+
+                event = conn.execute(
+                    text("""
+                        SELECT
+                            sp.name AS selected_player,
+                            hp.name AS host_name,
+                            w.mechanism,
+                            w.outcome_type,
+                            w.outcome_text
+                        FROM overtime_wheel_events w
+                        LEFT JOIN players sp
+                          ON sp.id = w.selected_player_id
+                        LEFT JOIN players hp
+                          ON hp.id = w.host_id
+                        WHERE w.segment_id = :segment_id
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                formatted_segments.append({
+                    "segment_type": segment_type,
+                    "event": dict(event) if event else None
+                })
+
+            # =========================
+            # 🎯 BETCHA
+            # =========================
+            elif segment_type == "Betcha":
+
+                event = conn.execute(
+                    text("""
+                        SELECT
+                            p.name AS presenter_name,
+                            b.bet_description
+                        FROM overtime_betcha_events b
+                        JOIN players p
+                          ON p.id = b.presenter_id
+                        WHERE b.segment_id = :segment_id
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                votes = conn.execute(
+                    text("""
+                        SELECT
+                            pl.name AS voter_name,
+                            v.vote
+                        FROM overtime_betcha_votes v
+                        JOIN players pl
+                          ON pl.id = v.voter_id
+                        WHERE v.segment_id = :segment_id
+                        ORDER BY pl.name
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().all()
+
+                formatted_segments.append({
+                    "segment_type": segment_type,
+                    "event": dict(event) if event else None,
+                    "votes": [dict(v) for v in votes]
+                })
+
+            # =========================
+            # 🎨 GET CRAFTY
+            # =========================
+            elif segment_type == "Get Crafty":
+
+                entries = conn.execute(
+                    text("""
+                        SELECT
+                            p.name,
+                            e.entry_description,
+                            e.placement,
+                            e.is_winner
+                        FROM overtime_get_crafty_entries e
+                        JOIN players p
+                          ON p.id = e.player_id
+                        WHERE e.segment_id = :segment_id
+                        ORDER BY e.placement NULLS LAST
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().all()
+
+                formatted_segments.append({
+                    "segment_type": segment_type,
+                    "entries": [dict(e) for e in entries]
+                })
 
         return {
-            "segment_id": segment["id"],
-            "episode_number": segment["episode_number"],
-            "title": segment["title"],
-            "items": items
+            "segments": formatted_segments
         }
-
-
 
 
 

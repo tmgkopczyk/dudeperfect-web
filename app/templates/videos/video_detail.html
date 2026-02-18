@@ -158,78 +158,124 @@
 
   {% endif %}
 
-  {% if overtime %}
+  {% if overtime and overtime.segments %}
   <hr>
 
   <section class="space-y-6">
 
     <h2 class="text-xl font-semibold text-neutral-900">
-      Overtime {{ overtime.episode_number }} — Cool Not Cool
+      Overtime Segments
     </h2>
 
+    {% for segment in overtime.segments %}
 
-    {% for item in overtime.items %}
-    <div class="border rounded-lg p-4 bg-white space-y-3">
+      <!-- ================= COOL NOT COOL ================= -->
+      {% if segment.segment_type == "Cool Not Cool" %}
+      <div class="border rounded-lg p-4 bg-white space-y-4">
+        <div class="font-semibold text-lg">Cool Not Cool</div>
 
-      <!-- Item header -->
-      <div class="flex justify-between items-center">
-        <div class="font-semibold text-neutral-800">
-          <span class="text-neutral-500 text-sm">
-            {{ item.presenter_name }}
-          </span>
-          <div class="text-lg">
-            {{ item.item_name }}
+        {% for item in segment.items %}
+          <div class="border rounded p-3 space-y-2">
+            <div class="flex justify-between">
+              <span class="font-medium">
+                {{ item.presenter_name }} — {{ item.item_name }}
+              </span>
+
+              {% if item.overall %}
+                <span class="
+                  {% if item.overall == 'cool' %}
+                    text-green-600
+                  {% elif item.overall == 'not_cool' %}
+                    text-red-600
+                  {% else %}
+                    text-blue-600
+                  {% endif %}
+                ">
+                  {{ item.overall | replace('_',' ') | title }}
+                </span>
+              {% endif %}
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+              {% for vote in item.votes %}
+                <div class="flex justify-between border rounded px-2 py-1">
+                  <span>{{ vote.voter_name }}</span>
+                  <span>{{ vote.vote | replace('_',' ') | title }}</span>
+                </div>
+              {% endfor %}
+            </div>
           </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- ================= WHEEL ================= -->
+      {% if segment.segment_type in ["Wheel Unfortunate","Wheel Fortunate"] %}
+      <div class="border rounded-lg p-4 bg-white space-y-2">
+        <div class="font-semibold text-lg">
+          🎡 {{ segment.segment_type }}
         </div>
 
-
-        {% if item.overall %}
-        <span class="text-sm px-2 py-1 rounded
-          {% if item.overall == 'cool' %}
-            bg-green-100 text-green-700
-          {% elif item.overall == 'not_cool' %}
-            bg-red-100 text-red-700
-          {% else %}
-            bg-neutral-200 text-neutral-700
+        {% if segment.event %}
+          <div><strong>Selected:</strong> {{ segment.event.selected_player }}</div>
+          {% if segment.event.host_name %}
+            <div><strong>Host:</strong> {{ segment.event.host_name }}</div>
           {% endif %}
-        ">
-          {{ item.overall | replace('_',' ') | title }}
-        </span>
+          <div><strong>Mechanism:</strong> {{ segment.event.mechanism }}</div>
+          <div>
+            <strong>{{ segment.event.outcome_type | title }}:</strong>
+            {{ segment.event.outcome_text }}
+          </div>
         {% endif %}
       </div>
+      {% endif %}
 
-      <!-- Votes grid -->
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+      <!-- ================= BETCHA ================= -->
+      {% if segment.segment_type == "Betcha" %}
+      <div class="border rounded-lg p-4 bg-white space-y-3">
+        <div class="font-semibold text-lg">Betcha</div>
 
-        {% for vote in item.votes %}
-        <div class="flex justify-between items-center border rounded px-2 py-1">
+        {% if segment.event %}
+          <div><strong>Presenter:</strong> {{ segment.event.presenter_name }}</div>
+          <div>{{ segment.event.bet_description }}</div>
+        {% endif %}
 
-          <span>{{ vote.voter_name }}</span>
-
-          <span class="
-            {% if vote.vote == 'cool' %}
-              text-green-600
-            {% elif vote.vote == 'not_cool' %}
-              text-red-600
-            {% elif vote.vote == 'both' %}
-              text-blue-600
-            {% else %}
-              text-neutral-500
-            {% endif %}
-          ">
-            {{ vote.vote | replace('_',' ') | title }}
-          </span>
-
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          {% for vote in segment.votes %}
+            <div class="flex justify-between border rounded px-2 py-1">
+              <span>{{ vote.voter_name }}</span>
+              <span>{{ vote.vote | title }}</span>
+            </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-
       </div>
+      {% endif %}
 
-    </div>
+      <!-- ================= GET CRAFTY ================= -->
+      {% if segment.segment_type == "Get Crafty" %}
+      <div class="border rounded-lg p-4 bg-white space-y-3">
+        <div class="font-semibold text-lg">Get Crafty</div>
+
+        {% for entry in segment.entries %}
+          <div class="border rounded p-2">
+            <div class="flex justify-between">
+              <span>{{ entry.name }}</span>
+              {% if entry.is_winner %}
+                <span class="text-green-600 font-semibold">Winner</span>
+              {% endif %}
+            </div>
+            <div class="text-sm text-neutral-600">
+              {{ entry.entry_description }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
     {% endfor %}
-
   </section>
   {% endif %}
+
 
 
   <hr class="border-neutral-300">
