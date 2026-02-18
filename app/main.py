@@ -250,6 +250,7 @@ def videos_page(request: Request, q: str | None = None):
 def video_detail_page(request: Request, video_id: int):
     video = get_video_detail_page(video_id)
     battle = get_battle_view(video_id)
+    overtime = get_overtime_view(video_id)
 
     return templates.TemplateResponse(
         "videos/video_detail.html",
@@ -257,8 +258,10 @@ def video_detail_page(request: Request, video_id: int):
             "request": request,
             "video": video,
             "battle": battle,
+            "overtime": overtime,
         },
     )
+
 
 
 

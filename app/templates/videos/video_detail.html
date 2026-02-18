@@ -158,6 +158,80 @@
 
   {% endif %}
 
+  {% if overtime %}
+  <hr>
+
+  <section class="space-y-6">
+
+    <h2 class="text-xl font-semibold text-neutral-900">
+      Overtime {{ overtime.episode_number }} — Cool Not Cool
+    </h2>
+
+
+    {% for item in overtime.items %}
+    <div class="border rounded-lg p-4 bg-white space-y-3">
+
+      <!-- Item header -->
+      <div class="flex justify-between items-center">
+        <div class="font-semibold text-neutral-800">
+          <span class="text-neutral-500 text-sm">
+            {{ item.presenter_name }}
+          </span>
+          <div class="text-lg">
+            {{ item.item_name }}
+          </div>
+        </div>
+
+
+        {% if item.overall %}
+        <span class="text-sm px-2 py-1 rounded
+          {% if item.overall == 'cool' %}
+            bg-green-100 text-green-700
+          {% elif item.overall == 'not_cool' %}
+            bg-red-100 text-red-700
+          {% else %}
+            bg-neutral-200 text-neutral-700
+          {% endif %}
+        ">
+          {{ item.overall | replace('_',' ') | title }}
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Votes grid -->
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+
+        {% for vote in item.votes %}
+        <div class="flex justify-between items-center border rounded px-2 py-1">
+
+          <span>{{ vote.voter_name }}</span>
+
+          <span class="
+            {% if vote.vote == 'cool' %}
+              text-green-600
+            {% elif vote.vote == 'not_cool' %}
+              text-red-600
+            {% elif vote.vote == 'both' %}
+              text-blue-600
+            {% else %}
+              text-neutral-500
+            {% endif %}
+          ">
+            {{ vote.vote | replace('_',' ') | title }}
+          </span>
+
+        </div>
+        {% endfor %}
+
+      </div>
+
+    </div>
+    {% endfor %}
+
+  </section>
+  {% endif %}
+
+
   <hr class="border-neutral-300">
 
   <!-- Songs section -->

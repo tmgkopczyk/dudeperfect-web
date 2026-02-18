@@ -1,6 +1,7 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 from sqlalchemy import text
 from .db import engine
+
 def get_battle_view(video_id: int):
     with engine.connect() as conn:
 
@@ -113,6 +114,80 @@ def get_battle_view(video_id: int):
     }
 
 
+def get_overtime_view(video_id: int):
+    with engine.connect() as conn:
+
+        segment = conn.execute(
+            text("""
+                SELECT id, episode_number, title
+                FROM overtime_segments
+                WHERE video_id = :video_id
+                LIMIT 1
+            """),
+            {"video_id": video_id}
+        ).mappings().fetchone()
+
+        if not segment:
+            return None
+
+        rows = conn.execute(
+            text("""
+                SELECT
+                    osi.id AS item_id,
+                    osi.item_name,
+                    p.name AS presenter_name
+                FROM overtime_segment_items osi
+                JOIN players p ON p.id = osi.presenter_id
+                WHERE osi.segment_id = :segment_id
+                ORDER BY osi.id
+            """),
+            {"segment_id": segment["id"]}
+        ).mappings().all()
+
+        items = []
+
+        for r in rows:
+            votes = conn.execute(
+                text("""
+                    SELECT
+                        pl.name AS voter_name,
+                        osiv.vote
+                    FROM overtime_segment_item_votes osiv
+                    JOIN players pl ON pl.id = osiv.voter_id
+                    WHERE osiv.item_id = :item_id
+                """),
+                {"item_id": r["item_id"]}
+            ).mappings().all()
+
+            vote_list = [dict(v) for v in votes]
+            vote_list.sort(
+                key=lambda v: (v["voter_name"] != r["presenter_name"], v["voter_name"])
+            )
+
+
+            # 🔥 Compute overall dynamically
+            vote_values = [v["vote"] for v in vote_list if v["vote"]]
+            counts = Counter(vote_values)
+
+            overall = None
+            if counts.get("cool", 0) > counts.get("not_cool", 0):
+                overall = "cool"
+            elif counts.get("not_cool", 0) > counts.get("cool", 0):
+                overall = "not_cool"
+
+            items.append({
+                "presenter_name": r["presenter_name"],
+                "item_name": r["item_name"],
+                "votes": vote_list,
+                "overall": overall
+            })
+
+        return {
+            "segment_id": segment["id"],
+            "episode_number": segment["episode_number"],
+            "title": segment["title"],
+            "items": items
+        }
 
 
 
