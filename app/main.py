@@ -253,8 +253,14 @@ def debug_overtime(video_id: int):
 @pages_router.get("/videos/{video_id}", response_class=HTMLResponse)
 def video_detail_page(request: Request, video_id: int):
     video = get_video_detail_page(video_id)
+
+    if not video:
+        raise HTTPException(status_code=404)
+
     battle = get_battle_view(video_id)
     overtime = get_overtime_view(video_id)
+    bucket_list = get_bucket_list_view(video_id)
+    stereotypes = get_stereotypes_view(video_id)
 
     return templates.TemplateResponse(
         "videos/video_detail.html",
@@ -263,10 +269,10 @@ def video_detail_page(request: Request, video_id: int):
             "video": video,
             "battle": battle,
             "overtime": overtime,
+            "bucket_list": bucket_list,
+            "stereotypes": stereotypes,
         },
     )
-
-
 
 
 app.include_router(pages_router)

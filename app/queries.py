@@ -136,15 +136,17 @@ def get_overtime_view(video_id: int):
             text("""
                 SELECT
                     os.id,
-                    st.name AS segment_type
+                    st.name,
+                    st.canonical_name
                 FROM overtime_segments os
                 JOIN overtime_segment_types st
-                  ON st.id = os.segment_type_id
+                ON st.id = os.segment_type_id
                 WHERE os.episode_id = :episode_id
                 ORDER BY os.segment_order NULLS LAST, os.id
             """),
             {"episode_id": episode["id"]}
         ).mappings().all()
+
 
         if not segments:
             return None
@@ -154,12 +156,13 @@ def get_overtime_view(video_id: int):
         for segment in segments:
 
             segment_id = segment["id"]
-            segment_type = segment["segment_type"]
+            raw_type = segment["name"]
+            canonical_type = segment["canonical_name"] or raw_type
 
             # =========================
             # 🎬 COOL NOT COOL
             # =========================
-            if segment_type == "Cool Not Cool":
+            if canonical_type in ("Cool Not Cool", "Not Cool Cool"):
 
                 items = conn.execute(
                     text("""
@@ -213,14 +216,16 @@ def get_overtime_view(video_id: int):
                     })
 
                 formatted_segments.append({
-                    "segment_type": segment_type,
+                    "segment_type": canonical_type,
+                    "display_name": raw_type,
                     "items": formatted_items
                 })
+
 
             # =========================
             # 🎡 WHEEL SEGMENT
             # =========================
-            elif segment_type in ("Wheel Unfortunate", "Wheel Fortunate"):
+            elif canonical_type in ("Wheel Unfortunate", "Wheel Fortunate"):
 
                 event = conn.execute(
                     text("""
@@ -241,14 +246,14 @@ def get_overtime_view(video_id: int):
                 ).mappings().first()
 
                 formatted_segments.append({
-                    "segment_type": segment_type,
+                    "segment_type": raw_type,
                     "event": dict(event) if event else None
                 })
 
             # =========================
             # 🎯 BETCHA
             # =========================
-            elif segment_type == "Betcha":
+            elif canonical_type == "Betcha":
 
                 event = conn.execute(
                     text("""
@@ -278,7 +283,7 @@ def get_overtime_view(video_id: int):
                 ).mappings().all()
 
                 formatted_segments.append({
-                    "segment_type": segment_type,
+                    "segment_type": raw_type,
                     "event": dict(event) if event else None,
                     "votes": [dict(v) for v in votes]
                 })
@@ -286,7 +291,7 @@ def get_overtime_view(video_id: int):
             # =========================
             # 🎨 GET CRAFTY
             # =========================
-            elif segment_type == "Get Crafty":
+            elif canonical_type == "Get Crafty":
 
                 entries = conn.execute(
                     text("""
@@ -305,15 +310,255 @@ def get_overtime_view(video_id: int):
                 ).mappings().all()
 
                 formatted_segments.append({
-                    "segment_type": segment_type,
+                    "segment_type": raw_type,
                     "entries": [dict(e) for e in entries]
                 })
+            
+            # =========================
+            # 🎮 DEFAULT / PARTICIPANT SEGMENTS
+            # =========================
+            elif canonical_type == "Game Time":
+                event = conn.execute(
+                    text("""
+                        SELECT
+                            e.id,
+                            e.game_description,
+                            e.score_label,
+                            e.win_condition,
+                            p.name AS winner_name
+                        FROM overtime_game_time_events e
+                        LEFT JOIN players p
+                        ON p.id = e.winner_player_id
+                        WHERE e.segment_id = :segment_id
+                        LIMIT 1
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+
+                results = []
+
+                if event is not None:
+                    results = conn.execute(
+                        text("""
+                            SELECT
+                                p.name,
+                                r.score_display,
+                                r.is_winner
+                            FROM overtime_game_time_results r
+                            JOIN players p ON p.id = r.player_id
+                            WHERE r.event_id = :event_id
+                            ORDER BY r.score_numeric DESC NULLS LAST
+                        """),
+                        {"event_id": event["id"]}
+                    ).mappings().all()
+
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "event": dict(event) if event else None,
+                    "results": [dict(r) for r in results]
+                })
+            elif canonical_type == "Absurd Recurds":
+                record = conn.execute(
+                    text("""
+                        SELECT
+                            ar.record_description,
+                            p.name AS player_name,
+                            ar.outcome,
+                            ar.notes
+                        FROM overtime_absurd_recurds ar
+                        LEFT JOIN players p
+                        ON p.id = ar.player_id
+                        WHERE ar.segment_id = :segment_id
+                        LIMIT 1
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                formatted_segments.append({
+                "segment_type": raw_type,
+                "record": dict(record) if record else None
+                })
+                            
+            elif canonical_type == "Judge Dudy":
+
+                case = conn.execute(
+                    text("""
+                        SELECT
+                            c.id,
+                            c.case_title,
+                            c.case_description,
+                            c.verdict
+                        FROM overtime_judge_dudy_cases c
+                        WHERE c.segment_id = :segment_id
+                        LIMIT 1
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                participants = []
+
+                if case:
+                    participants = conn.execute(
+                        text("""
+                            SELECT
+                                p.name,
+                                j.role
+                            FROM overtime_judge_dudy_participants j
+                            JOIN players p
+                              ON p.id = j.player_id
+                            WHERE j.case_id = :case_id
+                        """),
+                        {"case_id": case["id"]}
+                    ).mappings().all()
+
+                # Convert participants into role dictionary
+                role_map = {}
+                for p in participants:
+                    role_map[p["role"]] = p["name"]
+
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "case": {
+                        "title": case["case_title"] if case else None,
+                        "description": case["case_description"] if case else None,
+                        "verdict": case["verdict"] if case else None,
+                        "participants": role_map
+                    } if case else None
+                })
+            elif canonical_type in ("Top 10", "Not Top 10", "Top 15"):
+                entries = conn.execute(
+                    text("""
+                        SELECT rank, selection, notes
+                        FROM overtime_ranked_list_entries
+                        WHERE segment_id = :segment_id
+                        ORDER BY rank ASC
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().all()
+
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "entries": [dict(e) for e in entries]
+                })
+
+            else:
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "data": None
+                })
+
 
         return {
             "segments": formatted_segments
         }
 
+def get_bucket_list_view(video_id: int):
+    with engine.connect() as conn:
 
+        # 1️⃣ Find episode
+        episode = conn.execute(
+            text("""
+                SELECT id, episode_number
+                FROM bucket_list_episodes
+                WHERE video_id = :video_id
+                LIMIT 1
+            """),
+            {"video_id": video_id}
+        ).mappings().first()
+
+        if not episode:
+            return None
+
+        # 2️⃣ Get tasks
+        tasks = conn.execute(
+            text("""
+                SELECT
+                    task_order,
+                    task_text,
+                    completed,
+                    completion_note
+                FROM bucket_list_tasks
+                WHERE episode_id = :episode_id
+                ORDER BY task_order
+            """),
+            {"episode_id": episode["id"]}
+        ).mappings().all()
+
+        if not tasks:
+            return None
+
+        return {
+            "episode_number": episode["episode_number"],
+            "tasks": [dict(t) for t in tasks]
+        }
+
+def get_stereotypes_view(video_id: int):
+    with engine.connect() as conn:
+
+        # 1️⃣ Find episode
+        episode = conn.execute(
+            text("""
+                SELECT id, episode_number, theme
+                FROM stereotypes_episodes
+                WHERE video_id = :video_id
+                LIMIT 1
+            """),
+            {"video_id": video_id}
+        ).mappings().first()
+
+        if not episode:
+            return None
+
+        # 2️⃣ Get segments (no performer join here anymore)
+        segments = conn.execute(
+            text("""
+                SELECT
+                    s.id,
+                    s.segment_order,
+                    s.name,
+                    s.timestamp_seconds,
+                    s.notes,
+                    r.name AS recurring_name
+                FROM stereotype_segments s
+                LEFT JOIN recurring_stereotypes r
+                    ON r.id = s.recurring_id
+                WHERE s.episode_id = :episode_id
+                ORDER BY s.segment_order
+            """),
+            {"episode_id": episode["id"]}
+        ).mappings().all()
+
+        formatted_segments = []
+
+        for seg in segments:
+
+            performers = conn.execute(
+                text("""
+                    SELECT p.name
+                    FROM stereotype_segment_performers ssp
+                    JOIN players p
+                      ON p.id = ssp.player_id
+                    WHERE ssp.segment_id = :segment_id
+                    ORDER BY p.name
+                """),
+                {"segment_id": seg["id"]}
+            ).mappings().all()
+
+            formatted_segments.append({
+                "segment_order": seg["segment_order"],
+                "name": seg["name"],
+                "timestamp_seconds": seg["timestamp_seconds"],
+                "notes": seg["notes"],
+                "recurring_name": seg["recurring_name"],
+                "performers": [p["name"] for p in performers]
+            })
+
+        return {
+            "episode_number": episode["episode_number"],
+            "theme": episode["theme"],
+            "segments": formatted_segments
+        }
 
 def get_song_detail(song_id: int):
     sql = text("""SELECT
