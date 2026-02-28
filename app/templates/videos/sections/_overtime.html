@@ -17,8 +17,35 @@
 
       {% set template_path = "videos/overtime/_" ~ normalized ~ ".html" %}
 
+      {# Try specific template first #}
       {% include template_path ignore missing %}
-      {% include "videos/overtime/_default.html" if template_path is not defined %}
+
+      {# If specific template does NOT exist, render fallback #}
+      {% if not (
+          normalized in [
+            "cool_not_cool",
+            "wheel_unfortunate",
+            "wheel_fortunate",
+            "betcha",
+            "get_crafty",
+            "get_un_crafty",
+            "game_time",
+            "absurd_recurds",
+            "judge_dudy",
+            "top_10",
+            "not_top_10",
+            "top_15"
+          ]
+      ) %}
+        <div class="border rounded-lg p-4 bg-white">
+          <div class="font-semibold text-lg">
+            {{ segment.segment_type }}
+          </div>
+          <div class="text-sm text-neutral-500 italic">
+            No structured data recorded yet.
+          </div>
+        </div>
+      {% endif %}
 
     {% endfor %}
 
