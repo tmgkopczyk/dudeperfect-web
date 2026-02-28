@@ -15,7 +15,10 @@
           | replace("-", "_")
       %}
 
-      {% include "videos/overtime/_" ~ normalized ~ ".html" ignore missing %}
+      {% set template_path = "videos/overtime/_" ~ normalized ~ ".html" %}
+
+      {% include template_path ignore missing %}
+      {% include "videos/overtime/_default.html" if template_path is not defined %}
 
     {% endfor %}
 
