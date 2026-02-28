@@ -1,0 +1,17 @@
+<div class="border rounded-lg p-4 bg-white space-y-2">
+    <div class="font-semibold text-lg">
+        🎡 {{ segment.segment_type }}
+    </div>
+
+    {% if segment.event %}
+        <div><strong>Selected:</strong> {{ segment.event.selected_player }}</div>
+        {% if segment.event.host_name %}
+        <div><strong>Host:</strong> {{ segment.event.host_name }}</div>
+        {% endif %}
+        <div><strong>Mechanism:</strong> {{ segment.event.mechanism }}</div>
+        <div>
+        <strong>{{ segment.event.outcome_type | title }}:</strong>
+        {{ segment.event.outcome_text }}
+        </div>
+    {% endif %}
+    </div>

@@ -1,0 +1,23 @@
+{% if overtime and overtime.segments %}
+  <hr>
+
+  <section class="space-y-6">
+
+    <h2 class="text-xl font-semibold text-neutral-900">
+      Overtime Segments
+    </h2>
+
+    {% for segment in overtime.segments %}
+
+      {% set normalized = segment.segment_type
+          | lower
+          | replace(" ", "_")
+          | replace("-", "_")
+      %}
+
+      {% include "videos/overtime/_" ~ normalized ~ ".html" ignore missing %}
+
+    {% endfor %}
+
+  </section>
+{% endif %}

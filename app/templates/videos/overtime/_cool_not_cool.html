@@ -1,0 +1,39 @@
+<div class="border rounded-lg p-4 bg-white space-y-4">
+    <div class="font-semibold text-lg">
+        {{ segment.display_name }}
+    </div>
+
+
+    {% for item in segment.get("items", []) %}
+        <div class="border rounded p-3 space-y-2">
+        <div class="flex justify-between">
+            <span class="font-medium">
+            {{ item.presenter_name }} — {{ item.item_name }}
+            </span>
+
+            {% if item.overall %}
+            <span class="
+                {% if item.overall == 'cool' %}
+                text-green-600
+                {% elif item.overall == 'not_cool' %}
+                text-red-600
+                {% else %}
+                text-blue-600
+                {% endif %}
+            ">
+                {{ item.overall | replace('_',' ') | title }}
+            </span>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            {% for vote in item.votes %}
+            <div class="flex justify-between border rounded px-2 py-1">
+                <span>{{ vote.voter_name }}</span>
+                <span>{{ vote.vote | replace('_',' ') | title }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        </div>
+    {% endfor %}
+    </div>

@@ -1,0 +1,36 @@
+<div class="border rounded-lg p-4 bg-white space-y-2">
+
+  <div class="font-semibold text-lg">
+    🎯 Absurd Recurds
+  </div>
+
+  {% if segment.record %}
+    <div class="text-sm text-neutral-800 font-medium">
+      {{ segment.record.record_description }}
+    </div>
+
+    {% if segment.record.player_name %}
+      <div class="text-sm text-neutral-600">
+        Person attempting record: {{ segment.record.player_name }}
+      </div>
+    {% endif %}
+
+    {% if segment.record.outcome %}
+      <div class="text-sm font-semibold
+        {% if segment.record.outcome == 'success' %}
+          text-green-600
+        {% else %}
+          text-red-600
+        {% endif %}
+      ">
+        {{ segment.record.outcome | title }}
+      </div>
+    {% endif %}
+
+  {% else %}
+    <div class="text-sm text-neutral-500 italic">
+      No record attempt recorded.
+    </div>
+  {% endif %}
+
+</div>

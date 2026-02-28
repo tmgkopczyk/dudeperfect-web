@@ -1,0 +1,49 @@
+<div class="border rounded-lg p-4 bg-white space-y-3">
+
+<div class="font-semibold text-lg">
+    ⚖️ Judge Dudy{% if segment.case and segment.case.title %} – {{ segment.case.title }}{% endif %}
+</div>
+
+{% if segment.case %}
+
+    {% if segment.case.description %}
+    <div class="text-sm text-neutral-700">
+        {{ segment.case.description }}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+
+    {% if segment.case.participants.judge %}
+        <div><strong>Judge:</strong> {{ segment.case.participants.judge }}</div>
+    {% endif %}
+
+    {% if segment.case.participants.plaintiff %}
+        <div><strong>Plaintiff:</strong> {{ segment.case.participants.plaintiff }}</div>
+    {% endif %}
+
+    {% if segment.case.participants.defendant %}
+        <div><strong>Defendant:</strong> {{ segment.case.participants.defendant }}</div>
+    {% endif %}
+
+    </div>
+
+    {% if segment.case.verdict %}
+    <div class="mt-2 font-semibold
+        {% if segment.case.verdict == 'plaintiff' %}
+        text-green-600
+        {% else %}
+        text-red-600
+        {% endif %}
+    ">
+        Verdict: In favor of the {{ segment.case.verdict | title }}
+    </div>
+    {% endif %}
+
+{% else %}
+    <div class="text-sm text-neutral-500 italic">
+    No case recorded.
+    </div>
+{% endif %}
+
+</div>
