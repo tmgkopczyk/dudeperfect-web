@@ -7,9 +7,14 @@ from fastapi import APIRouter
 from .queries import *
 from .sitemap import router as sitemap_router
 from .robots import router as robots_router
-
+import os
+from typing import Optional
+from fastapi import status
 
 N8N_WEBHOOK_URL = "https://n8n.khomeserver.com/webhook/dp-contact-7b4f92"
+TURNSTILE_SECRET = os.getenv("TURNSTILE_SECRET", "")
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
 
 app = FastAPI(
     title="Dude Perfect Music DB",
@@ -30,6 +35,30 @@ templates = Jinja2Templates(directory="app/templates")
 from fastapi.responses import JSONResponse
 #from app.queries import get_battle_view
 
+def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
+    """
+    Verifies Cloudflare Turnstile token server-side.
+    Returns True if valid, else False.
+    """
+    if not TURNSTILE_SECRET:
+        # If you forgot to set it, fail closed (safer)
+        return False
+
+    data = {
+        "secret": TURNSTILE_SECRET,
+        "response": token,
+    }
+    if remote_ip:
+        data["remoteip"] = remote_ip
+
+    try:
+        r = requests.post(TURNSTILE_VERIFY_URL, data=data, timeout=3)
+        r.raise_for_status()
+        payload = r.json()
+        return bool(payload.get("success"))
+    except requests.RequestException:
+        return False
+
 @app.get("/debug/battles/{video_id}")
 def debug_battle_view(video_id: int):
     data = get_battle_view(video_id)
@@ -41,38 +70,78 @@ def debug_battle_view(video_id: int):
     return data
 
 
-@pages_router.post("/contact/submit",response_class=HTMLResponse)
+@pages_router.post("/contact/submit", response_class=HTMLResponse)
 def contact_submit(
     request: Request,
-    name: str = Form(...),
-    email: str = Form(...),
-    message: str = Form(...),
+    name: str = Form(..., max_length=120),
+    email: str = Form(..., max_length=254),
+    message: str = Form(..., max_length=5000),
     token: str = Form(...),
-    website: str = Form("")
+    website: str = Form(""),
+    cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
 ):
+    # 1) Honeypot: silently accept but do nothing
+    if website.strip():
+        return templates.TemplateResponse("contact_success.html", {"request": request})
+
+    # 2) Basic normalization
+    name = name.strip()
+    email = email.strip()
+    message = message.strip()
+
+    if not name or not email or not message:
+        return templates.TemplateResponse(
+            "contact.html",
+            {
+                "request": request,
+                "turnstile_site_key": TURNSTILE_SITE_KEY,
+                "error": "Please fill out all fields.",
+            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # 3) Turnstile verification (fail closed)
+    if not cf_turnstile_response.strip():
+        return templates.TemplateResponse(
+            "contact.html",
+            {
+                "request": request,
+                "turnstile_site_key": TURNSTILE_SITE_KEY,
+                "error": "Please complete the verification and try again.",
+            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    client_ip = request.client.host if request.client else None
+    if not verify_turnstile(cf_turnstile_response.strip(), remote_ip=client_ip):
+        return templates.TemplateResponse(
+            "contact.html",
+            {
+                "request": request,
+                "turnstile_site_key": TURNSTILE_SITE_KEY,
+                "error": "Verification failed. Please try again.",
+            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # 4) Forward to n8n (keep your current behavior: never fail the form)
     payload = {
-        "name":name,
-        "email":email,
-        "message":message,
-        "token":token,
-        "website":website,
-        "page":str(request.url)
+        "name": name,
+        "email": email,
+        "message": message,
+        "token": token,
+        "website": website,
+        "page": str(request.url),
+        "ip": client_ip,
+        "user_agent": request.headers.get("user-agent", ""),
     }
+
     try:
-    	requests.post(
-        	N8N_WEBHOOK_URL,
-        	json=payload,
-        	timeout=2   # short timeout now safe
-    	)
+        requests.post(N8N_WEBHOOK_URL, json=payload, timeout=2)
     except requests.exceptions.RequestException:
-        pass  # never fail the form
+        pass
 
-    #requests.post(N8N_WEBHOOK_URL,json=payload, timeout=5)
-
-    return templates.TemplateResponse(
-        "contact_success.html",
-        {"request":request}
-    )
+    return templates.TemplateResponse("contact_success.html", {"request": request})
 
 @pages_router.get("/", response_class=HTMLResponse)
 def home(request: Request):
@@ -92,7 +161,7 @@ def search_home(request: Request):
 def contact_page(request: Request):
     return templates.TemplateResponse(
         "contact.html",
-        {"request": request}
+        {"request": request, "turnstile_site_key": TURNSTILE_SITE_KEY}
     )
 
 

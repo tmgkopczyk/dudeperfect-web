@@ -9,13 +9,20 @@
   Send a message below.
 </p>
 
+{# Optional: show server-side error #}
+{% if error %}
+  <div class="max-w-xl mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    {{ error }}
+  </div>
+{% endif %}
+
 <form
   method="post"
   action="/contact/submit"
   class="space-y-4 max-w-xl"
 >
   <!-- Honeypot -->
-  <input type="text" name="website" class="hidden">
+  <input type="text" name="website" class="hidden" autocomplete="off" tabindex="-1">
 
   <input type="hidden" name="token" value="dp_contact_v1">
 
@@ -24,7 +31,9 @@
     <input
       name="name"
       required
+      maxlength="120"
       class="w-full border rounded px-3 py-2"
+      autocomplete="name"
     >
   </div>
 
@@ -34,7 +43,9 @@
       type="email"
       name="email"
       required
+      maxlength="254"
       class="w-full border rounded px-3 py-2"
+      autocomplete="email"
     >
   </div>
 
@@ -44,8 +55,17 @@
       name="message"
       rows="5"
       required
+      maxlength="5000"
       class="w-full border rounded px-3 py-2"
     ></textarea>
+  </div>
+
+  <!-- Turnstile -->
+  <div class="pt-2">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+    {# You pass turnstile_site_key from FastAPI #}
+    <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
   </div>
 
   <button
