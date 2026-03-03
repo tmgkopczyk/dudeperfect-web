@@ -1,10 +1,7 @@
 fastapi
 uvicorn[standard]
-psycopg[binary]
-sqlalchemy
 jinja2
-python-dotenv
-passlib[bcrypt]
-bcrypt<4
 requests
 python-multipart
+sqlalchemy
+psycopg[binary]

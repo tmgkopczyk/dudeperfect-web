@@ -29,6 +29,25 @@
       </a>
     {% endif %}
   </header>
+  {% if video.youtube_video_id %}
+  <div class="mt-4">
+    <a href="https://www.youtube.com/watch?v={{ video.youtube_video_id }}"
+       target="_blank"
+       class="block relative group">
+
+      <img
+        src="https://img.youtube.com/vi/{{ video.youtube_video_id }}/maxresdefault.jpg"
+        alt="{{ video.title }}"
+        class="w-full max-w-4xl rounded-xl shadow-md"
+        loading="lazy"
+      >
+
+      <!-- Optional subtle hover overlay -->
+      <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition rounded-xl"></div>
+
+    </a>
+  </div>
+  {% endif %}
 
   {% if battle %}
 
