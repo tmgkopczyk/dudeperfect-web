@@ -52,8 +52,26 @@
       </p>
     {% endif %}
   </section>
+  {% if song.spotify_track_id %}
+  <section class="space-y-3">
+    <h2 class="text-xl font-medium text-neutral-900">
+      Listen
+    </h2>
+
+    <div class="max-w-2xl">
+      <iframe
+        class="w-full rounded-xl shadow"
+        src="https://open.spotify.com/embed/track/{{ song.spotify_track_id }}"
+        height="152"
+        frameborder="0"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        loading="lazy">
+      </iframe>
+    </div>
+  </section>
 
   <hr class="border-neutral-300">
+  {% endif %}
 
   <!-- Metadata -->
   <section class="text-xs text-neutral-500 space-y-1">

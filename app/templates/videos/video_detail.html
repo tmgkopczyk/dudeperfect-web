@@ -30,20 +30,23 @@
     {% endif %}
   </header>
   {% if video.youtube_video_id %}
-  <div class="mt-4">
+  <div class="mt-4 max-w-4xl mx-auto">
     <a href="https://www.youtube.com/watch?v={{ video.youtube_video_id }}"
        target="_blank"
-       class="block relative group">
+       class="relative block rounded-xl overflow-hidden group">
 
       <img
         src="https://img.youtube.com/vi/{{ video.youtube_video_id }}/maxresdefault.jpg"
         alt="{{ video.title }}"
-        class="w-full max-w-4xl rounded-xl shadow-md"
+        class="w-full h-auto block"
         loading="lazy"
       >
 
-      <!-- Optional subtle hover overlay -->
-      <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition rounded-xl"></div>
+      <!-- Properly centered overlay -->
+      <div class="absolute inset-0 rounded-xl
+                  bg-black/0 group-hover:bg-black/10
+                  transition duration-200">
+      </div>
 
     </a>
   </div>
