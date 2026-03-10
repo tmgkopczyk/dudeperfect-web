@@ -788,23 +788,23 @@ def get_video_detail(video_id: int):
 def get_video_detail_page(video_id: int):
     sql = text("""
         SELECT
-          v.id                AS video_id,
-          v.title             AS video_title,
-          v.youtube_video_id  AS youtube_video_id,
-          v.published_at      AS published_at,
+            v.id                AS video_id,
+            v.title             AS video_title,
+            v.youtube_video_id  AS youtube_video_id,
+            v.published_at      AS published_at,
 
-          s.id                AS song_id,
-          s.title             AS song_title,
-          s.spotify_track_id  AS spotify_track_id,
+            s.id                AS song_id,
+            s.title             AS song_title,
+            s.spotify_track_id  AS spotify_track_id,
 
-          a.name              AS artist_name
-        FROM videos v
-        LEFT JOIN video_songs vs  ON vs.video_id = v.id
-        LEFT JOIN songs s         ON s.id = vs.song_id
-        LEFT JOIN song_artists sa ON sa.song_id = s.id
-        LEFT JOIN artists a       ON a.id = sa.artist_id
-        WHERE v.id = :video_id
-        ORDER BY s.title, sa.artist_order
+            a.name              AS artist_name
+            FROM videos v
+            LEFT JOIN video_songs vs  ON vs.video_id = v.id
+            LEFT JOIN songs s         ON s.id = vs.song_id
+            LEFT JOIN song_artists sa ON sa.song_id = s.id
+            LEFT JOIN artists a       ON a.id = sa.artist_id
+            WHERE v.id = :video_id
+            ORDER BY vs.song_order NULLS LAST, sa.artist_order
     """)
 
     with engine.connect() as conn:
