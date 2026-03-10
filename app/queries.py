@@ -804,7 +804,7 @@ def get_video_detail_page(video_id: int):
             LEFT JOIN song_artists sa ON sa.song_id = s.id
             LEFT JOIN artists a       ON a.id = sa.artist_id
             WHERE v.id = :video_id
-            ORDER BY vs.song_order NULLS LAST, sa.artist_order
+            ORDER BY COALESCE(vs.song_order, s.id), sa.artist_order
     """)
 
     with engine.connect() as conn:
