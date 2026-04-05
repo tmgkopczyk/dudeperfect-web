@@ -1,365 +1,269 @@
-from fastapi import FastAPI, Request, Query, Form
-import requests
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, Query, Form, HTTPException, APIRouter, status
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
-from fastapi import HTTPException
-from fastapi import APIRouter
-from .queries import *
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+from typing import Optional
+import requests
+import os
+
+from . import queries
 from .sitemap import router as sitemap_router
 from .robots import router as robots_router
-import os
-from typing import Optional
-from fastapi import status
-from pathlib import Path
-from fastapi.responses import FileResponse
 
+
+# =========================
+# App setup
+# =========================
 
 BASE_DIR = Path(__file__).resolve().parent
 
-templates = Jinja2Templates(
-    directory=str(BASE_DIR / "templates")
+app = FastAPI(
+    title="Dude Perfect Music DB",
+    version="0.1.0",
 )
 
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+
+# =========================
+# Routers
+# =========================
+
+pages = APIRouter(include_in_schema=False)
+api = APIRouter(prefix="/api")
+
+
+# =========================
+# Config
+# =========================
 
 N8N_WEBHOOK_URL = "https://n8n.khomeserver.com/webhook/dp-contact-7b4f92"
 TURNSTILE_SECRET = os.getenv("TURNSTILE_SECRET", "")
 TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
 
-app = FastAPI(
-    title="Dude Perfect Music DB",
-    version="0.1.0",
-    openapi_tags=[
-        {"name": "Songs", "description": "Song-related operations"},
-        {"name": "Artists", "description": "Artist-related operations"},
-        {"name": "Videos", "description": "Video-related operations"},
-        {"name": "Search", "description": "Search endpoints"}
-    ],
-)
 
-@app.get("/favicon.ico", include_in_schema=False)
-def favicon():
-    return FileResponse("app/static/favicon.ico")
+# =========================
+# Helpers
+# =========================
+
+def render(request: Request, template: str, context: dict = {}, status_code=200):
+    return templates.TemplateResponse(
+        template,
+        {"request": request, **context},
+        status_code=status_code
+    )
 
 
-pages_router = APIRouter(include_in_schema=False)
-api_router   = APIRouter(prefix="/api")
-
-
-from fastapi.responses import JSONResponse
-#from app.queries import get_battle_view
-
-def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
-    """
-    Verifies Cloudflare Turnstile token server-side.
-    Returns True if valid, else False.
-    """
+def verify_turnstile(token: str, remote_ip: Optional[str] = None) -> bool:
     if not TURNSTILE_SECRET:
-        # If you forgot to set it, fail closed (safer)
         return False
 
-    data = {
-        "secret": TURNSTILE_SECRET,
-        "response": token,
-    }
+    data = {"secret": TURNSTILE_SECRET, "response": token}
     if remote_ip:
         data["remoteip"] = remote_ip
 
     try:
         r = requests.post(TURNSTILE_VERIFY_URL, data=data, timeout=3)
         r.raise_for_status()
-        payload = r.json()
-        return bool(payload.get("success"))
+        return bool(r.json().get("success"))
     except requests.RequestException:
         return False
 
-@app.get("/debug/battles/{video_id}")
-def debug_battle_view(video_id: int):
-    data = get_battle_view(video_id)
-    if not data:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "Not a battle"}
-        )
-    return data
+
+# =========================
+# Static / misc
+# =========================
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(str(BASE_DIR / "static" / "favicon.ico"))
 
 
-@pages_router.post("/contact/submit", response_class=HTMLResponse)
+# =========================
+# Pages
+# =========================
+
+@pages.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    return render(request, "index.html")
+
+
+@pages.get("/search", response_class=HTMLResponse)
+def search_home(request: Request):
+    return render(request, "search/index.html")
+
+
+@pages.get("/contact", response_class=HTMLResponse)
+def contact_page(request: Request):
+    return render(request, "contact.html", {
+        "turnstile_site_key": TURNSTILE_SITE_KEY
+    })
+
+
+@pages.post("/contact/submit", response_class=HTMLResponse)
 def contact_submit(
     request: Request,
-    name: str = Form(..., max_length=120),
-    email: str = Form(..., max_length=254),
-    message: str = Form(..., max_length=5000),
-    token: str = Form(...),
+    name: str = Form(...),
+    email: str = Form(...),
+    message: str = Form(...),
     website: str = Form(""),
     cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
 ):
-    # 1) Honeypot: silently accept but do nothing
     if website.strip():
-        return templates.TemplateResponse("contact_success.html", {"request": request})
+        return render(request, "contact_success.html")
 
-    # 2) Basic normalization
-    name = name.strip()
-    email = email.strip()
-    message = message.strip()
+    if not name.strip() or not email.strip() or not message.strip():
+        return render(request, "contact.html", {
+            "error": "Please fill out all fields.",
+            "turnstile_site_key": TURNSTILE_SITE_KEY
+        }, status.HTTP_400_BAD_REQUEST)
 
-    if not name or not email or not message:
-        return templates.TemplateResponse(
-            "contact.html",
-            {
-                "request": request,
-                "turnstile_site_key": TURNSTILE_SITE_KEY,
-                "error": "Please fill out all fields.",
-            },
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # 3) Turnstile verification (fail closed)
-    if not cf_turnstile_response.strip():
-        return templates.TemplateResponse(
-            "contact.html",
-            {
-                "request": request,
-                "turnstile_site_key": TURNSTILE_SITE_KEY,
-                "error": "Please complete the verification and try again.",
-            },
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    client_ip = request.client.host if request.client else None
-    if not verify_turnstile(cf_turnstile_response.strip(), remote_ip=client_ip):
-        return templates.TemplateResponse(
-            "contact.html",
-            {
-                "request": request,
-                "turnstile_site_key": TURNSTILE_SITE_KEY,
-                "error": "Verification failed. Please try again.",
-            },
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # 4) Forward to n8n (keep your current behavior: never fail the form)
-    payload = {
-        "name": name,
-        "email": email,
-        "message": message,
-        "token": token,
-        "website": website,
-        "page": str(request.url),
-        "ip": client_ip,
-        "user_agent": request.headers.get("user-agent", ""),
-    }
+    if not verify_turnstile(cf_turnstile_response, request.client.host):
+        return render(request, "contact.html", {
+            "error": "Verification failed.",
+            "turnstile_site_key": TURNSTILE_SITE_KEY
+        }, status.HTTP_400_BAD_REQUEST)
 
     try:
-        requests.post(N8N_WEBHOOK_URL, json=payload, timeout=2)
-    except requests.exceptions.RequestException:
+        requests.post(N8N_WEBHOOK_URL, json={
+            "name": name,
+            "email": email,
+            "message": message,
+        }, timeout=2)
+    except:
         pass
 
-    return templates.TemplateResponse("contact_success.html", {"request": request})
-
-@pages_router.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    return templates.TemplateResponse(
-        "index.html",
-        {"request": request}
-    )
-
-@pages_router.get("/search", response_class=HTMLResponse)
-def search_home(request: Request):
-    return templates.TemplateResponse(
-        "search/index.html",
-        {"request": request}
-    )
-
-@pages_router.get("/contact", response_class=HTMLResponse)
-def contact_page(request: Request):
-    return templates.TemplateResponse(
-        "contact.html",
-        {"request": request, "turnstile_site_key": TURNSTILE_SITE_KEY}
-    )
+    return render(request, "contact_success.html")
 
 
+# =========================
+# Songs
+# =========================
 
-@pages_router.get("/songs", response_class=HTMLResponse)
-def songs_page(
-    request: Request,
-    q: str | None = Query(default=None, max_length=100)
-):
-    results = search_songs(q) if q else None
-    return templates.TemplateResponse(
-        "songs/songs.html",
-        {
-            "request": request,
-            "results": results,
-            "query": q
-        }
-    )
+@pages.get("/songs", response_class=HTMLResponse)
+def songs_page(request: Request, q: Optional[str] = None):
+    results = queries.search_songs(q) if q else None
+    return render(request, "songs/songs.html", {"results": results, "query": q})
 
 
-@pages_router.get("/songs/{song_id}", response_class=HTMLResponse)
-def song_detail_page(request: Request, song_id: int):
-    song = get_song_detail(song_id)
+@pages.get("/songs/{song_id}", response_class=HTMLResponse)
+def song_detail(request: Request, song_id: int):
+    song = queries.get_song_detail(song_id)
     if not song:
-        raise HTTPException(status_code=404)
-
-    return templates.TemplateResponse(
-        "songs/song_detail.html",
-        {"request": request, "song": song}
-    )
-
-@pages_router.get("/videos/categories", response_class=HTMLResponse)
-def video_categories_page(request: Request):
-    categories = list_video_categories()
-    return templates.TemplateResponse(
-        "videos/categories/index.html",
-        {"request": request, "categories": categories}
-    )
+        raise HTTPException(404)
+    return render(request, "songs/song_detail.html", {"song": song})
 
 
-@pages_router.get("/videos/categories/{slug}", response_class=HTMLResponse)
-def video_category_detail_page(
-    request: Request,
-    slug: str,
-    q: str | None = Query(default=None, max_length=100)
-):
-    category = get_video_category_by_slug(slug)
-    if not category:
-        raise HTTPException(status_code=404)
+# =========================
+# Artists
+# =========================
 
-    q = q.strip() if q else None
-    videos = list_videos_for_category(category["id"],q=q)
-
-    return templates.TemplateResponse(
-        "videos/categories/category_detail.html",
-        {
-            "request": request,
-            "category": category,
-            "videos": videos,
-            "query": q
-        }
-    )
+@pages.get("/artists", response_class=HTMLResponse)
+def artists_page(request: Request, q: Optional[str] = None):
+    results = queries.search_artists(q) if q else None
+    return render(request, "artists/artists.html", {"results": results, "query": q})
 
 
-@api_router.get("/search", tags=["Search"])
-def api_search(q: str, limit: int = 50):
-    if not q or len(q.strip()) < 1:
-        raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
-
-    results = search_songs(q.strip(), limit=limit)
-    return results
-
-@api_router.get("/song/{spotify_track_id}",tags=["Songs"])
-def api_song(spotify_track_id: str):
-    song = get_song_by_track_id(spotify_track_id)
-
-    if not song:
-        raise HTTPException(status_code=404, detail="Song not found")
-
-    return song
-
-@api_router.get("/songs/{song_id}",tags=["Songs"])
-def api_song_detail(song_id: int):
-    song = get_song_detail(song_id)
-    if not song:
-        raise HTTPException(status_code=404)
-    return song
-
-
-@api_router.get("/search/artists",tags=["Search","Artists"])
-def api_search_artists(q: str, limit: int = 50):
-    if not q or len(q.strip()) < 1:
-        raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
-
-    return search_artists(q.strip(), limit=limit)
-
-@api_router.get("/artists/{artist_id}",tags=["Artists"])
-def api_artist_detail(artist_id: int):
-    artist = get_artist_detail(artist_id)
-
+@pages.get("/artists/{artist_id}", response_class=HTMLResponse)
+def artist_detail(request: Request, artist_id: int):
+    artist = queries.get_artist_detail(artist_id)
     if not artist:
-        raise HTTPException(status_code=404, detail="Artist not found")
+        raise HTTPException(404)
+    return render(request, "artists/artist_detail.html", {"artist": artist})
 
+
+# =========================
+# Videos
+# =========================
+
+@pages.get("/videos", response_class=HTMLResponse)
+def videos_page(request: Request, q: Optional[str] = None):
+    results = queries.search_videos(q) if q else None
+    return render(request, "videos/videos.html", {"results": results, "query": q})
+
+
+@pages.get("/videos/{video_id}", response_class=HTMLResponse)
+def video_detail(request: Request, video_id: int):
+    video = queries.get_video_detail_page(video_id)
+    if not video:
+        raise HTTPException(404)
+
+    return render(request, "videos/video_detail.html", {
+        "video": video,
+        "battle": queries.get_battle_view(video_id),
+        "overtime": queries.get_overtime_view(video_id),
+        "bucket_list": queries.get_bucket_list_view(video_id),
+        "stereotypes": queries.get_stereotypes_view(video_id),
+    })
+
+
+# =========================
+# Categories
+# =========================
+
+@pages.get("/videos/categories", response_class=HTMLResponse)
+def categories_page(request: Request):
+    return render(request, "videos/categories/index.html", {
+        "categories": queries.list_video_categories()
+    })
+
+
+@pages.get("/videos/categories/{slug}", response_class=HTMLResponse)
+def category_detail(request: Request, slug: str, q: Optional[str] = None):
+    category = queries.get_video_category_by_slug(slug)
+    if not category:
+        raise HTTPException(404)
+
+    videos = queries.list_videos_for_category(category["id"], q=q)
+    return render(request, "videos/categories/category_detail.html", {
+        "category": category,
+        "videos": videos,
+        "query": q
+    })
+
+
+# =========================
+# API
+# =========================
+
+@api.get("/search")
+def api_search(q: str):
+    return queries.search_songs(q)
+
+
+@api.get("/songs/{song_id}")
+def api_song(song_id: int):
+    song = queries.get_song_detail(song_id)
+    if not song:
+        raise HTTPException(404)
+    return song
+
+
+@api.get("/artists/{artist_id}")
+def api_artist(artist_id: int):
+    artist = queries.get_artist_detail(artist_id)
+    if not artist:
+        raise HTTPException(404)
     return artist
 
 
-@pages_router.get("/artists/{artist_id}", response_class=HTMLResponse)
-def artist_detail(request: Request, artist_id: int):
-    artist = get_artist_detail(artist_id)
-    if not artist:
-        raise HTTPException(status_code=404)
-    return templates.TemplateResponse(
-        "artists/artist_detail.html",
-        {"request": request, "artist": artist}
-    )
-
-@pages_router.get("/artists", response_class=HTMLResponse)
-def artists_page(request: Request, q: str | None = None):
-    results = search_artists(q) if q else None
-    return templates.TemplateResponse(
-        "artists/artists.html",
-        {
-            "request": request,
-            "results": results,
-            "query": q
-        }
-    )
-
-
-
-@api_router.get("/videos/{video_id}",tags=["Videos"])
-def api_video_detail(video_id: int):
-    video = get_video_detail_page(video_id)
-
+@api.get("/videos/{video_id}")
+def api_video(video_id: int):
+    video = queries.get_video_detail_page(video_id)
     if not video:
-        raise HTTPException(status_code=404, detail="Video not found")
-
+        raise HTTPException(404)
     return video
 
-@pages_router.get("/videos", response_class=HTMLResponse)
-def videos_page(request: Request, q: str | None = None):
-    q = q.strip() if q else None
-    results = search_videos(q) if q else None
-    return templates.TemplateResponse(
-        "videos/videos.html",
-        {
-            "request": request,
-            "results": results,
-            "query": q
-        }
-    )
 
-@app.get("/debug/overtime/{video_id}")
-def debug_overtime(video_id: int):
-    return get_overtime_view(video_id)
+# =========================
+# Register routers
+# =========================
 
-
-@pages_router.get("/videos/{video_id}", response_class=HTMLResponse)
-def video_detail_page(request: Request, video_id: int):
-    video = get_video_detail_page(video_id)
-
-    if not video:
-        raise HTTPException(status_code=404)
-
-    battle = get_battle_view(video_id)
-    overtime = get_overtime_view(video_id)
-    bucket_list = get_bucket_list_view(video_id)
-    stereotypes = get_stereotypes_view(video_id)
-
-    return templates.TemplateResponse(
-        "videos/video_detail.html",
-        {
-            "request": request,
-            "video": video,
-            "battle": battle,
-            "overtime": overtime,
-            "bucket_list": bucket_list,
-            "stereotypes": stereotypes,
-        },
-    )
-
-
-app.include_router(pages_router)
-app.include_router(api_router)
+app.include_router(pages)
+app.include_router(api)
 app.include_router(sitemap_router)
 app.include_router(robots_router)

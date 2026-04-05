@@ -113,7 +113,6 @@ def get_battle_view(video_id: int):
         "final_standings": []
     }
 
-
 def get_overtime_view(video_id: int):
     with engine.connect() as conn:
 
@@ -562,26 +561,26 @@ def get_stereotypes_view(video_id: int):
 
 def get_song_detail(song_id: int):
     sql = text("""SELECT
-  s.id               AS song_id,
-  s.title            AS song_title,
-  s.spotify_track_id AS spotify_track_id,
+        s.id               AS song_id,
+        s.title            AS song_title,
+        s.spotify_track_id AS spotify_track_id,
 
-  a.name             AS artist_name,
-  sa.artist_order    AS artist_order,
+        a.name             AS artist_name,
+        sa.artist_order    AS artist_order,
 
-  v.id               AS video_id,
-  v.title            AS video_title,
-  v.youtube_video_id AS youtube_video_id
+        v.id               AS video_id,
+        v.title            AS video_title,
+        v.youtube_video_id AS youtube_video_id
 
-FROM songs s
-LEFT JOIN song_artists sa ON sa.song_id = s.id
-LEFT JOIN artists a       ON a.id = sa.artist_id
-LEFT JOIN video_songs vs  ON vs.song_id = s.id
-LEFT JOIN videos v        ON v.id = vs.video_id
+        FROM songs s
+        LEFT JOIN song_artists sa ON sa.song_id = s.id
+        LEFT JOIN artists a       ON a.id = sa.artist_id
+        LEFT JOIN video_songs vs  ON vs.song_id = s.id
+        LEFT JOIN videos v        ON v.id = vs.video_id
 
-WHERE s.id = :song_id
-ORDER BY sa.artist_order, v.published_at;
-""")
+        WHERE s.id = :song_id
+        ORDER BY sa.artist_order, v.published_at;
+    """)
 
     with engine.connect() as conn:
         rows = conn.execute(sql, {"song_id": song_id}).mappings().all()
@@ -614,7 +613,6 @@ ORDER BY sa.artist_order, v.published_at;
             seen_videos.add(row["video_id"])
 
     return song
-
 
 def search_songs(query: str, limit: int = 50):
     sql = text("""
@@ -716,7 +714,6 @@ def search_artists(query: str, limit: int = 50):
         }
         for row in rows
     ]
-
 
 def search_videos(query: str, limit: int = 50):
     sql = text("""
@@ -844,8 +841,6 @@ def get_video_detail_page(video_id: int):
     video["songs"] = list(video["songs"].values())
     return video
 
-
-
 def get_artist_detail(artist_id: int):
     sql = text("""
         SELECT
@@ -921,7 +916,6 @@ def list_video_categories():
     """)
     with engine.connect() as conn:
         return conn.execute(sql).mappings().all()
-
 
 def get_video_category_by_slug(slug: str):
     sql = text("""
