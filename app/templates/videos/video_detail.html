@@ -1,114 +1,144 @@
 {% extends "base.html" %}
-{% block title %}{{ video.title }}{% endblock %}
+
+{% block title %}{{ video.title }} - Dude Perfect{% endblock %}
+{% block description %}Songs used in {{ video.title }} and detailed breakdown of segments.{% endblock %}
 
 {% block content %}
+
 <section class="space-y-6">
 
   <!-- Back link -->
-  <button
-    type="button"
-    onclick="if (history.length > 1) history.back(); else window.location='/'"
-    class="text-sm text-neutral-500 hover:text-[#2EFCE6]"
-  >
-    ← Back
+
+<button
+type="button"
+onclick="if (history.length > 1) history.back(); else window.location='/'"
+class="text-sm text-neutral-500 hover:text-[#2EFCE6]"
+
+>
+
+← Back
+
   </button>
 
   <!-- Title -->
+
   <header class="space-y-1">
     <h1 class="text-3xl font-semibold text-neutral-900">
       {{ video.title }}
     </h1>
 
-    {% if video.youtube_video_id %}
-      <a
-        href="https://www.youtube.com/watch?v={{ video.youtube_video_id }}"
-        target="_blank"
-        class="text-sm text-[#2EFCE6] hover:underline"
-      >
-        Watch on YouTube →
-      </a>
-    {% endif %}
+{% if video.published_at %}
+  <div class="text-sm text-neutral-500">
+    Published: {{ video.published_at }}
+  </div>
+{% endif %}
+
+{% if video.youtube_video_id %}
+  <a
+    href="https://www.youtube.com/watch?v={{ video.youtube_video_id }}"
+    target="_blank"
+    class="text-sm text-[#2EFCE6] hover:underline"
+  >
+    Watch on YouTube →
+  </a>
+{% endif %}
+
   </header>
-  {% if video.youtube_video_id %}
+
+  <!-- Thumbnail -->
+
+{% if video.youtube_video_id %}
+
   <div class="mt-4 max-w-4xl mx-auto">
     <a href="https://www.youtube.com/watch?v={{ video.youtube_video_id }}"
        target="_blank"
        class="relative block rounded-xl overflow-hidden group">
 
-      <img
-        src="https://img.youtube.com/vi/{{ video.youtube_video_id }}/maxresdefault.jpg"
-        alt="{{ video.title }}"
-        class="w-full h-auto block"
-        loading="lazy"
-      >
+  <img
+    src="https://img.youtube.com/vi/{{ video.youtube_video_id }}/maxresdefault.jpg"
+    alt="{{ video.title }}"
+    class="w-full h-auto block"
+    loading="lazy"
+  >
 
-      <!-- Properly centered overlay -->
-      <div class="absolute inset-0 rounded-xl
-                  bg-black/0 group-hover:bg-black/10
-                  transition duration-200">
-      </div>
+  <!-- Overlay + Play button -->
+  <div class="absolute inset-0 flex items-center justify-center
+              bg-black/0 group-hover:bg-black/20
+              transition duration-200">
 
-    </a>
+    <div class="bg-white/90 rounded-full p-4 text-xl group-hover:scale-110 transition">
+      ▶
+    </div>
+
+  </div>
+</a>
+
   </div>
   {% endif %}
 
-  {% if battle %}
+{% if battle %}
 
-  <hr>
+  <hr class="border-neutral-200">
 
   <!-- Players -->
+
   <section class="space-y-3">
     <h3 class="text-lg font-medium text-neutral-900">
       Players
     </h3>
 
-    <ul class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-      {% for team in battle.teams %}
-        {% for player in team.players %}
-          <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
-            {% if player.is_guest %}
-              <span title="Guest">⭐</span>
-            {% endif %}
-            {{ player.name }}
-          </li>
-        {% endfor %}
-      {% endfor %}
-    </ul>
+<ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+  {% for team in battle.teams %}
+    {% for player in team.players %}
+      <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
+        {% if player.is_guest %}
+          <span title="Guest">⭐</span>
+        {% endif %}
+        {{ player.name }}
+      </li>
+    {% endfor %}
+  {% endfor %}
+</ul>
+
   </section>
 
-  {% if battle.description or battle.notes or battle.rules %}
-  <hr>
+{% if battle.description or battle.notes or battle.rules %}
+
+  <hr class="border-neutral-200">
 
   <!-- Battle Overview -->
+
   <section class="space-y-2">
     <h3 class="text-lg font-medium text-neutral-900">
       Battle Overview
     </h3>
 
-    {% if battle.description %}
-      <p class="text-sm text-neutral-700">
-        {{ battle.description }}
-      </p>
-    {% endif %}
+{% if battle.description %}
+  <p class="text-sm text-neutral-700">
+    {{ battle.description }}
+  </p>
+{% endif %}
 
-    {% if battle.rules %}
-    <div class="text-sm text-neutral-700">
-      <span class="font-semibold">Rules:</span>
-        <div class="mt-1">
-          {{ battle.rules }}
-        </div>
+{% if battle.rules %}
+  <div class="text-sm text-neutral-700">
+    <span class="font-semibold">Rules:</span>
+    <div class="mt-1">
+      {{ battle.rules }}
     </div>
-    {% endif %}
+  </div>
+{% endif %}
 
+{% if battle.notes %}
+  <p class="text-sm text-neutral-600 italic">
+    {{ battle.notes }}
+  </p>
+{% endif %}
 
-    {% if battle.notes %}
-      <p class="text-sm text-neutral-600 italic">
-        {{ battle.notes }}
-      </p>
-    {% endif %}
   </section>
   {% endif %}
-  {% if battle.winner %}
+
+{% if battle.winner %}
+
   <div class="mt-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
     <span class="text-lg">🏆</span>
     <span class="text-sm font-semibold text-green-700">
@@ -117,187 +147,186 @@
   </div>
   {% endif %}
 
+{% if battle.timeline %}
 
-  {% if battle.timeline %}
-  <hr>
+  <hr class="border-neutral-200">
 
   <section class="space-y-4">
     <h3 class="text-lg font-medium text-neutral-900">
       Battle Rounds
     </h3>
 
-    {% for round in battle.timeline %}
-      <div class="border rounded-lg p-4 space-y-3 bg-white">
+{% for round in battle.timeline %}
+  <div class="border rounded-lg p-4 space-y-3 bg-white">
 
-        <div class="font-semibold text-neutral-800">
-          {{ round.name }}
-        </div>
-
-        <ul class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-          {% for p in round.results %}
-          <li class="flex flex-col border rounded px-2 py-1 bg-white">
-
-            <!-- Name + status -->
-            <div class="flex justify-between items-center">
-              <span class="font-medium">{{ p.name }}</span>
-
-              {% if p.status %}
-                <span class="text-xs italic
-                  {% if p.status == 'winner' %}text-green-700
-                  {% elif p.status == 'runner_up' %}text-blue-600
-                  {% else %}text-neutral-500
-                  {% endif %}">
-                  {{ p.status | replace('_',' ') | title }}
-                </span>
-              {% endif %}
-            </div>
-
-            <!-- Score -->
-            {% if p.score is defined and p.score is not none %}
-              <div class="text-xs text-neutral-600">
-                {{ p.score|round(2) }}
-                {% if round.score_label %} {{ round.score_label }}{% endif %}
-              </div>
-            {% endif %}
-
-            <!-- Notes -->
-            {% if p.notes %}
-              <div class="text-xs text-neutral-500 italic">
-                {{ p.notes }}
-              </div>
-            {% endif %}
-
-          </li>
-          {% endfor %}
-
-        </ul>
-
-      </div>
-    {% endfor %}
-  </section>
-  {% endif %}
-  {% endif %}
-  {% include "videos/sections/_overtime.html" %}
-  {% if bucket_list and bucket_list.tasks %}
-  <hr>
-
-  <section class="space-y-6">
-
-    <h2 class="text-xl font-semibold text-neutral-900">
-      Bucket List Checklist
-    </h2>
-
-    {% set completed = bucket_list.tasks | selectattr("completed") | list | length %}
-    {% set total = bucket_list.tasks | length %}
-
-    <div class="text-sm text-neutral-500">
-      {{ completed }} / {{ total }} tasks completed
+    <div class="font-semibold text-neutral-800">
+      {{ round.name }}
     </div>
 
-    <ul class="space-y-3">
-      {% for task in bucket_list.tasks %}
-        <li class="flex items-start gap-3 border rounded-lg p-3 bg-white">
+    <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+      {% for p in round.results %}
+      <li class="flex flex-col border rounded px-2 py-1 bg-white">
 
-          <!-- Checkbox -->
-          {% if task.completed %}
-            <span class="text-[#2EFCE6] font-bold mt-0.5">✓</span>
-          {% else %}
-            <span class="text-gray-300 mt-0.5">☐</span>
+        <div class="flex justify-between items-center">
+          <span class="font-medium">{{ p.name }}</span>
+
+          {% if p.status %}
+            <span class="text-xs italic
+              {% if p.status == 'winner' %}text-green-700
+              {% elif p.status == 'runner_up' %}text-blue-600
+              {% else %}text-neutral-500
+              {% endif %}">
+              {{ p.status | replace('_',' ') | title }}
+            </span>
           {% endif %}
+        </div>
 
-          <!-- Task Text -->
-          <div>
-            <div class="{% if task.completed %}line-through text-neutral-400{% else %}text-neutral-900{% endif %}">
-              {{ task.task_text }}
-            </div>
-
-            {% if task.completion_note %}
-              <div class="text-sm text-neutral-500 italic">
-                ({{ task.completion_note }})
-              </div>
-            {% endif %}
+        {% if p.score is defined and p.score is not none %}
+          <div class="text-xs text-neutral-600">
+            {{ "%.2f"|format(p.score) }}
+            {% if round.score_label %} {{ round.score_label }}{% endif %}
           </div>
+        {% endif %}
 
-        </li>
+        {% if p.notes %}
+          <div class="text-xs text-neutral-500 italic">
+            {{ p.notes }}
+          </div>
+        {% endif %}
+
+      </li>
       {% endfor %}
     </ul>
 
+  </div>
+{% endfor %}
+
   </section>
   {% endif %}
-  {% if stereotypes and stereotypes.segments %}
-  <hr>
+  {% endif %}
+
+{% include "videos/sections/_overtime.html" %}
+
+{% if bucket_list and bucket_list.tasks %}
+
+  <hr class="border-neutral-200">
 
   <section class="space-y-6">
 
-    <h2 class="text-xl font-semibold text-neutral-900">
-      {{ stereotypes.theme }} Stereotypes
-    </h2>
+<h2 class="text-xl font-semibold text-neutral-900">
+  Bucket List Checklist
+</h2>
 
-    <ol class="space-y-2">
-      {% for seg in stereotypes.segments %}
-        <li class="border rounded-lg p-3 bg-white">
+{% set completed = bucket_list.tasks | selectattr("completed") | list | length %}
+{% set total = bucket_list.tasks | length %}
 
-          <div class="font-medium">
-            {{ seg.segment_order }}. {{ seg.name }}
+<div class="text-sm text-neutral-500">
+  {{ completed }} / {{ total }} tasks completed
+</div>
+
+<ul class="space-y-3">
+  {% for task in bucket_list.tasks %}
+    <li class="flex items-start gap-3 border rounded-lg p-3 bg-white">
+
+      {% if task.completed %}
+        <span class="text-[#2EFCE6] font-bold mt-0.5">✓</span>
+      {% else %}
+        <span class="text-gray-300 mt-0.5">☐</span>
+      {% endif %}
+
+      <div>
+        <div class="{% if task.completed %}line-through text-neutral-400{% else %}text-neutral-900{% endif %}">
+          {{ task.task_text }}
+        </div>
+
+        {% if task.completion_note %}
+          <div class="text-sm text-neutral-500 italic">
+            ({{ task.completion_note }})
           </div>
+        {% endif %}
+      </div>
 
-          {% if seg.performers %}
-            <div class="text-sm text-neutral-500">
-              Played by: {{ seg.performers | join(', ') }}
-            </div>
-          {% endif %}
+    </li>
+  {% endfor %}
+</ul>
 
-          {% if seg.recurring_name %}
-            <div class="text-xs text-green-600 font-semibold mt-1">
-              Recurring Character
-            </div>
-          {% endif %}
+  </section>
+  {% endif %}
 
-          {% if seg.notes %}
-            <div class="text-sm text-neutral-500 italic mt-1">
-              {{ seg.notes }}
-            </div>
-          {% endif %}
+{% if stereotypes and stereotypes.segments %}
 
-        </li>
-      {% endfor %}
-    </ol>
+  <hr class="border-neutral-200">
+
+  <section class="space-y-6">
+
+<h2 class="text-xl font-semibold text-neutral-900">
+  {{ stereotypes.theme }} Stereotypes
+</h2>
+
+<ol class="space-y-2">
+  {% for seg in stereotypes.segments %}
+    <li class="border rounded-lg p-3 bg-white">
+
+      <div class="font-medium">
+        {{ seg.segment_order }}. {{ seg.name }}
+      </div>
+
+      {% if seg.performers %}
+        <div class="text-sm text-neutral-500">
+          Played by: {{ seg.performers | join(', ') }}
+        </div>
+      {% endif %}
+
+      {% if seg.recurring_name %}
+        <div class="text-xs text-green-600 font-semibold mt-1">
+          Recurring Character
+        </div>
+      {% endif %}
+
+      {% if seg.notes %}
+        <div class="text-sm text-neutral-500 italic mt-1">
+          {{ seg.notes }}
+        </div>
+      {% endif %}
+
+    </li>
+  {% endfor %}
+</ol>
 
   </section>
   {% endif %}
 
   <hr class="border-neutral-300">
 
-  <!-- Songs section -->
-  <section class="space-y-3">
+  <!-- Songs -->
+
+  <section class="space-y-3" id="songs">
     <h2 class="text-xl font-medium text-neutral-900">
       Songs used
     </h2>
 
-    {% if video.songs %}
-      <ul class="space-y-3">
-        {% for song in video.songs %}
-          <li class="border border-gray-200 rounded p-3 hover:bg-gray-50">
-            <a
-              href="/songs/{{ song.id }}"
-              class="font-semibold hover:text-[#2EFCE6]"
-            >
-              {{ song.title }}
-            </a>
+{% if video.songs %}
+  <ul class="space-y-3">
+    {% for song in video.songs %}
+      <li class="border border-gray-200 rounded p-3 hover:bg-gray-50 transition">
+        <a href="/songs/{{ song.id }}" class="font-semibold hover:text-[#2EFCE6]">
+          {{ song.title }}
+        </a>
 
-            {% if song.artists %}
-              <div class="text-sm text-neutral-600">
-                {{ song.artists | join(', ') }}
-              </div>
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="text-neutral-600 italic">
-        No songs currently linked to this video.
-      </p>
-    {% endif %}
+        {% if song.artists %}
+          <div class="text-sm text-neutral-600">
+            {{ song.artists | join(', ') }}
+          </div>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="text-neutral-500 italic bg-gray-50 border rounded p-3">
+    No songs currently linked to this video.
+  </div>
+{% endif %}
+
   </section>
 
 </section>
