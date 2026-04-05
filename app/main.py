@@ -10,6 +10,17 @@ from .robots import router as robots_router
 import os
 from typing import Optional
 from fastapi import status
+from pathlib import Path
+from fastapi.responses import FileResponse
+
+
+BASE_DIR = Path(__file__).resolve().parent
+
+templates = Jinja2Templates(
+    directory=str(BASE_DIR / "templates")
+)
+
+
 
 N8N_WEBHOOK_URL = "https://n8n.khomeserver.com/webhook/dp-contact-7b4f92"
 TURNSTILE_SECRET = os.getenv("TURNSTILE_SECRET", "")
@@ -27,10 +38,14 @@ app = FastAPI(
     ],
 )
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("app/static/favicon.ico")
+
+
 pages_router = APIRouter(include_in_schema=False)
 api_router   = APIRouter(prefix="/api")
 
-templates = Jinja2Templates(directory="app/templates")
 
 from fastapi.responses import JSONResponse
 #from app.queries import get_battle_view
