@@ -961,18 +961,25 @@ def list_videos_for_category(category_id: int, q: str | None = None):
 def get_player_by_slug(slug: str):
     sql = text("""
         SELECT
-            id,
-            name,
-            full_name,
-            nickname,
-            hometown,
-            birthday,
-            bio,
-            image_url,
-            accent_color,
-            slug
-        FROM players
-        WHERE slug = :slug
+            p.id,
+            p.name,
+            p.full_name,
+            p.nickname,
+            p.hometown,
+            p.birthday,
+            p.bio,
+            p.image_url,
+            p.accent_color,
+            p.slug,
+
+            (
+                SELECT COUNT(DISTINCT bp.battle_id)
+                FROM battle_players bp
+                WHERE bp.name = p.name
+            ) AS total_battles
+
+        FROM players p
+        WHERE p.slug = :slug
         LIMIT 1
     """)
 
@@ -986,3 +993,22 @@ def get_player_by_slug(slug: str):
         return None
 
     return dict(row)
+
+def list_players():
+    sql = text("""
+        SELECT
+            name,
+            full_name,
+            nickname,
+            slug,
+            accent_color,
+            image_url
+        FROM players
+        WHERE slug IS NOT NULL
+        ORDER BY id
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql).mappings().all()
+
+    return [dict(r) for r in rows]

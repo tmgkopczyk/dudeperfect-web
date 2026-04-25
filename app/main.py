@@ -190,6 +190,17 @@ def player_page(request: Request, slug: str):
             "recent_battles": []
         }
     )
+@pages.get("/players", response_class=HTMLResponse)
+def players_index(request: Request):
+    players = queries.list_players()
+
+    return render(
+        request,
+        "players/index.html",
+        {
+            "players": players
+        }
+    )
 
 # =========================
 # Videos

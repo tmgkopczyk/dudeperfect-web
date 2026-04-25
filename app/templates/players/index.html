@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Players{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-6">Players</h1>
+
+<ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+  {% for p in players %}
+  <li class="border rounded p-4 hover:bg-gray-50 transition">
+
+    <a href="/player/{{ p.slug }}"
+       class="font-semibold text-lg hover:text-[#2EFCE6]">
+      {{ p.full_name or p.name }}
+    </a>
+
+    {% if p.nickname %}
+      <p class="text-sm text-gray-500 mt-1">
+        "{{ p.nickname }}"
+      </p>
+    {% endif %}
+
+    {% if p.hometown %}
+      <p class="text-sm text-gray-600 mt-2">
+        {{ p.hometown }}
+      </p>
+    {% endif %}
+
+    <div class="mt-3 h-2 rounded"
+         style="background-color: {{ p.accent_color or '#ccc' }};">
+    </div>
+
+  </li>
+  {% endfor %}
+
+</ul>
+{% endblock %}
