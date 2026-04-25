@@ -959,7 +959,7 @@ def list_videos_for_category(category_id: int, q: str | None = None):
 
 
 def get_player_by_slug(slug: str):
-    sql = """
+    sql = text("""
         SELECT
             id,
             name,
@@ -972,17 +972,17 @@ def get_player_by_slug(slug: str):
             accent_color,
             slug
         FROM players
-        WHERE slug = %s
+        WHERE slug = :slug
         LIMIT 1
-    """
+    """)
 
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql, (slug,))
-            row = cur.fetchone()
+    with engine.connect() as conn:
+        row = conn.execute(
+            sql,
+            {"slug": slug}
+        ).mappings().first()
 
-            if not row:
-                return None
+    if not row:
+        return None
 
-            cols = [desc[0] for desc in cur.description]
-            return dict(zip(cols, row))
+    return dict(row)
