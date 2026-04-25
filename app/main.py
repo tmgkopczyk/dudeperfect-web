@@ -175,6 +175,21 @@ def artist_detail(request: Request, artist_id: int):
         raise HTTPException(404)
     return render(request, "artists/artist_detail.html", {"artist": artist})
 
+@pages.get("/player/{slug}", response_class=HTMLResponse)
+def player_page(request: Request, slug: str):
+    player = queries.get_player_by_slug(slug)
+
+    if not player:
+        raise HTTPException(404)
+
+    return render(
+        request,
+        "players/player_detail.html",
+        {
+            "player": player,
+            "recent_battles": []
+        }
+    )
 
 # =========================
 # Videos

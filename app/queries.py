@@ -956,3 +956,33 @@ def list_videos_for_category(category_id: int, q: str | None = None):
 
     with engine.connect() as conn:
         return conn.execute(sql, params).mappings().all()
+
+
+def get_player_by_slug(slug: str):
+    sql = """
+        SELECT
+            id,
+            name,
+            full_name,
+            nickname,
+            hometown,
+            birthday,
+            bio,
+            image_url,
+            accent_color,
+            slug
+        FROM players
+        WHERE slug = %s
+        LIMIT 1
+    """
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (slug,))
+            row = cur.fetchone()
+
+            if not row:
+                return None
+
+            cols = [desc[0] for desc in cur.description]
+            return dict(zip(cols, row))

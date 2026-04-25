@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}{{ player.full_name }} | Dude Perfect Fan Archive{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-10">
+
+    <!-- Header -->
+    <div class="rounded-2xl shadow-lg overflow-hidden bg-white">
+
+        <div class="h-3" style="background-color: {{ player.accent_color or '#222' }};"></div>
+
+        <div class="grid md:grid-cols-3 gap-8 p-8">
+
+            <!-- Image -->
+            <div>
+                {% if player.image_url %}
+                <img
+                    src="{{ player.image_url }}"
+                    alt="{{ player.full_name }}"
+                    class="rounded-2xl w-full object-cover shadow"
+                >
+                {% else %}
+                <div class="rounded-2xl bg-gray-200 h-96 flex items-center justify-center text-gray-500">
+                    No Image
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Main Info -->
+            <div class="md:col-span-2">
+
+                <h1 class="text-4xl font-bold mb-2">
+                    {{ player.full_name }}
+                </h1>
+
+                {% if player.nickname %}
+                <p class="text-xl text-gray-500 mb-4">
+                    "{{ player.nickname }}"
+                </p>
+                {% endif %}
+
+                <div class="grid sm:grid-cols-2 gap-4 text-sm mb-6">
+
+                    {% if player.birthday %}
+                    <div>
+                        <span class="font-semibold">Birthday:</span>
+                        {{ player.birthday }}
+                    </div>
+                    {% endif %}
+
+                    {% if player.hometown %}
+                    <div>
+                        <span class="font-semibold">Hometown:</span>
+                        {{ player.hometown }}
+                    </div>
+                    {% endif %}
+
+                </div>
+
+                {% if player.bio %}
+                <div class="prose max-w-none text-gray-700 mb-6">
+                    <p>{{ player.bio }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                    <div class="rounded-xl bg-gray-100 p-4 text-center">
+                        <div class="text-2xl font-bold">
+                            {{ player.total_wins or 0 }}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            Battle Wins
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-100 p-4 text-center">
+                        <div class="text-2xl font-bold">
+                            {{ player.total_battles or 0 }}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            Battles
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-100 p-4 text-center">
+                        <div class="text-2xl font-bold">
+                            {{ player.video_count or 0 }}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            Videos
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-100 p-4 text-center">
+                        <div class="text-2xl font-bold">
+                            {{ player.win_rate or '—' }}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            Win Rate
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Battles -->
+    {% if recent_battles %}
+    <div class="mt-10">
+        <h2 class="text-2xl font-bold mb-4">Recent Battles</h2>
+
+        <div class="grid gap-4">
+            {% for battle in recent_battles %}
+            <a href="/battle/{{ battle.slug }}"
+               class="block bg-white rounded-xl shadow p-4 hover:shadow-md transition">
+                <div class="font-semibold">{{ battle.title }}</div>
+                <div class="text-sm text-gray-500">{{ battle.video_title }}</div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
