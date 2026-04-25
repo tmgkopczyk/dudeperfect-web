@@ -976,7 +976,32 @@ def get_player_by_slug(slug: str):
                 SELECT COUNT(DISTINCT bp.battle_id)
                 FROM battle_players bp
                 WHERE bp.name = p.name
-            ) AS total_battles
+            ) AS total_battles,
+
+            (
+                SELECT COUNT(*)
+                FROM battles b
+                WHERE b.winner ILIKE '%' || p.name || '%'
+            ) AS total_wins,
+
+            ROUND(
+                (
+                    (
+                        SELECT COUNT(*)
+                        FROM battles b
+                        WHERE b.winner ILIKE '%' || p.name || '%'
+                    ) * 100.0
+                ) /
+                NULLIF(
+                    (
+                        SELECT COUNT(DISTINCT bp.battle_id)
+                        FROM battle_players bp
+                        WHERE bp.name = p.name
+                    ),
+                    0
+                ),
+                1
+            ) AS win_rate
 
         FROM players p
         WHERE p.slug = :slug
