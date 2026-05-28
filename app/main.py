@@ -212,6 +212,28 @@ def videos_page(request: Request, q: Optional[str] = None):
     return render(request, "videos/videos.html", {"results": results, "query": q})
 
 
+# Put specific routes FIRST
+@pages.get("/videos/categories", response_class=HTMLResponse)
+def categories_page(request: Request):
+    return render(request, "videos/categories/index.html", {
+        "categories": queries.list_video_categories()
+    })
+
+
+@pages.get("/videos/categories/{slug}", response_class=HTMLResponse)
+def category_detail(request: Request, slug: str, q: Optional[str] = None):
+    category = queries.get_video_category_by_slug(slug)
+    if not category:
+        raise HTTPException(404)
+
+    videos = queries.list_videos_for_category(category["id"], q=q)
+    return render(request, "videos/categories/category_detail.html", {
+        "category": category,
+        "videos": videos,
+        "query": q
+    })
+
+
 @pages.get("/videos/{video_id}", response_class=HTMLResponse)
 def video_detail(request: Request, video_id: int):
     video = queries.get_video_detail_page(video_id)

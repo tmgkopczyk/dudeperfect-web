@@ -226,28 +226,30 @@ def get_overtime_view(video_id: int):
             # =========================
             elif canonical_type in ("Wheel Unfortunate", "Wheel Fortunate"):
 
-                event = conn.execute(
-                    text("""
-                        SELECT
-                            sp.name AS selected_player,
-                            hp.name AS host_name,
-                            w.mechanism,
-                            w.outcome_type,
-                            w.outcome_text
-                        FROM overtime_wheel_events w
-                        LEFT JOIN players sp
-                          ON sp.id = w.selected_player_id
-                        LEFT JOIN players hp
-                          ON hp.id = w.host_id
-                        WHERE w.segment_id = :segment_id
-                    """),
-                    {"segment_id": segment_id}
-                ).mappings().first()
+                events = conn.execute(
+                text("""
+                    SELECT
+                        w.id,
+                        sp.name AS selected_player,
+                        hp.name AS host_name,
+                        w.mechanism,
+                        w.outcome_type,
+                        w.outcome_text
+                    FROM overtime_wheel_events w
+                    LEFT JOIN players sp
+                    ON sp.id = w.selected_player_id
+                    LEFT JOIN players hp
+                    ON hp.id = w.host_id
+                    WHERE w.segment_id = :segment_id
+                    ORDER BY w.id
+                """),
+                {"segment_id": segment_id}
+            ).mappings().all()
 
-                formatted_segments.append({
-                    "segment_type": raw_type,
-                    "event": dict(event) if event else None
-                })
+            formatted_segments.append({
+                "segment_type": raw_type,
+                "events": [dict(e) for e in events]
+            })
 
             # =========================
             # 🎯 BETCHA
