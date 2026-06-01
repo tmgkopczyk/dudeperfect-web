@@ -200,12 +200,16 @@ def get_overtime_view(video_id: int):
                     not_cool_count = vote_values.count("not_cool")
 
                     overall = None
-                    if cool_count > not_cool_count:
+
+                    if cool_count == 5:
+                        overall = "super_cool"
+                    elif not_cool_count == 5:
+                        overall = "super_not_cool"
+                    elif cool_count > not_cool_count:
                         overall = "cool"
                     elif not_cool_count > cool_count:
                         overall = "not_cool"
-                    elif cool_count == not_cool_count and cool_count > 0:
-                        overall = "both"
+
 
                     formatted_items.append({
                         "item_name": item["item_name"],
@@ -244,12 +248,12 @@ def get_overtime_view(video_id: int):
                     ORDER BY w.id
                 """),
                 {"segment_id": segment_id}
-            ).mappings().all()
+                ).mappings().all()
 
-            formatted_segments.append({
-                "segment_type": raw_type,
-                "events": [dict(e) for e in events]
-            })
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "events": [dict(e) for e in events]
+                })
 
             # =========================
             # 🎯 BETCHA
@@ -260,10 +264,11 @@ def get_overtime_view(video_id: int):
                     text("""
                         SELECT
                             p.name AS presenter_name,
-                            b.bet_description
+                            b.bet_description,
+                            b.outcome
                         FROM overtime_betcha_events b
                         JOIN players p
-                          ON p.id = b.presenter_id
+                        ON p.id = b.presenter_id
                         WHERE b.segment_id = :segment_id
                     """),
                     {"segment_id": segment_id}

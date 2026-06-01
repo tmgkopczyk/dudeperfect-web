@@ -3,7 +3,20 @@
 
     {% if segment.event %}
         <div><strong>Presenter:</strong> {{ segment.event.presenter_name }}</div>
+
         <div>{{ segment.event.bet_description }}</div>
+
+        {% if segment.event.outcome is not none %}
+        <div>
+            <strong>Outcome:</strong>
+
+            {% if segment.event.outcome %}
+                <span class="text-green-600 font-medium">Successful</span>
+            {% else %}
+                <span class="text-red-600 font-medium">Failed</span>
+            {% endif %}
+        </div>
+        {% endif %}
     {% endif %}
 
     <div class="grid grid-cols-2 gap-2 text-sm">
@@ -14,4 +27,4 @@
         </div>
         {% endfor %}
     </div>
-    </div>
+</div>
