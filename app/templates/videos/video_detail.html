@@ -135,17 +135,30 @@
       <h3 class="text-lg font-medium text-neutral-900">Battle Rounds</h3>
 
       {% for round in battle.timeline %}
-        <div class="border rounded-lg p-4 space-y-3 bg-white">
-          <div class="font-semibold text-neutral-800">{{ round.name }}</div>
+      <div class="border rounded-lg p-4 space-y-3 bg-white">
+        <div class="font-semibold text-neutral-800">{{ round.name }}</div>
 
-          <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-            {% for p in round.results %}
-              <li class="flex flex-col border rounded px-2 py-1 bg-white">
-                <span class="font-medium">{{ p.name }}</span>
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+          {% for p in round.results %}
+            <li class="flex justify-between border rounded px-2 py-1 bg-white">
+              <span class="font-medium">{{ p.name }}</span>
+
+              <span class="text-neutral-600 text-right">
+                {% if p.score is not none %}
+                  {% if p.score == p.score|int %}
+                    {{ p.score|int }}
+                  {% else %}
+                    {{ "%.1f"|format(p.score) }}
+                  {% endif %}
+                  {% if round.score_label %}
+                    {{ round.score_label }}
+                  {% endif %}
+                {% endif %}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
       {% endfor %}
     </section>
     {% endif %}
