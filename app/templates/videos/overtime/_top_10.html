@@ -31,6 +31,23 @@
       {% endfor %}
 
     </div>
+
+    {% if segment.honorable_mentions %}
+      <div class="pt-3 border-t">
+
+        <div class="font-semibold text-sm text-neutral-700 mb-2">
+          Honorable Mentions
+        </div>
+
+        <ul class="list-disc ml-5 space-y-1">
+          {% for entry in segment.honorable_mentions %}
+            <li>{{ entry.item_text }}</li>
+          {% endfor %}
+        </ul>
+
+      </div>
+    {% endif %}
+
   {% else %}
     <div class="text-sm text-neutral-500 italic">
       No structured data recorded yet.

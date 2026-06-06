@@ -468,10 +468,17 @@ def get_overtime_view(video_id: int):
                             SELECT
                                 rank,
                                 item_text,
+                                item_type,
                                 reveal_order
                             FROM overtime_top_list_items
                             WHERE event_id = :event_id
-                            ORDER BY rank DESC, id
+                            ORDER BY
+                                CASE
+                                    WHEN item_type = 'ranked' THEN 0
+                                    ELSE 1
+                                END,
+                                rank DESC NULLS LAST,
+                                item_text
                         """),
                         {"event_id": event["id"]}
                     ).mappings().all()
@@ -479,7 +486,14 @@ def get_overtime_view(video_id: int):
                 formatted_segments.append({
                     "segment_type": raw_type,
                     "event": dict(event) if event else None,
-                    "entries": [dict(e) for e in entries]
+                    "entries": [
+                        dict(e) for e in entries
+                        if e["item_type"] == "ranked"
+                    ],
+                    "honorable_mentions": [
+                        dict(e) for e in entries
+                        if e["item_type"] == "honorable_mention"
+                    ]
                 })
             else:
                 formatted_segments.append({
