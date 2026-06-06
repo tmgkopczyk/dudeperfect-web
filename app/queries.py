@@ -299,25 +299,38 @@ def get_overtime_view(video_id: int):
             # =========================
             elif canonical_type == "Get Crafty":
 
-                entries = conn.execute(
+                event = conn.execute(
                     text("""
                         SELECT
-                            p.name,
-                            e.entry_description,
-                            e.placement,
-                            e.is_winner
-                        FROM overtime_get_crafty_entries e
+                            challenge_name,
+                            description,
+                            winner_id
+                        FROM overtime_get_crafty_events
+                        WHERE segment_id = :segment_id
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                participants = conn.execute(
+                    text("""
+                        SELECT
+                            p.name AS player_name,
+                            gp.placement
+                        FROM overtime_get_crafty_participants gp
                         JOIN players p
-                          ON p.id = e.player_id
-                        WHERE e.segment_id = :segment_id
-                        ORDER BY e.placement NULLS LAST
+                        ON p.id = gp.player_id
+                        JOIN overtime_get_crafty_events ge
+                        ON ge.id = gp.event_id
+                        WHERE ge.segment_id = :segment_id
+                        ORDER BY gp.placement
                     """),
                     {"segment_id": segment_id}
                 ).mappings().all()
 
                 formatted_segments.append({
                     "segment_type": raw_type,
-                    "entries": [dict(e) for e in entries]
+                    "event": dict(event) if event else None,
+                    "participants": [dict(p) for p in participants]
                 })
             
             # =========================
@@ -433,21 +446,41 @@ def get_overtime_view(video_id: int):
                     } if case else None
                 })
             elif canonical_type in ("Top 10", "Not Top 10", "Top 15"):
-                entries = conn.execute(
+                event = conn.execute(
                     text("""
-                        SELECT rank, selection, notes
-                        FROM overtime_ranked_list_entries
-                        WHERE segment_id = :segment_id
-                        ORDER BY rank ASC
+                        SELECT
+                            tle.id,
+                            tle.title,
+                            p.name AS presenter_name
+                        FROM overtime_top_list_events tle
+                        LEFT JOIN players p
+                            ON p.id = tle.presenter_id
+                        WHERE tle.segment_id = :segment_id
                     """),
                     {"segment_id": segment_id}
-                ).mappings().all()
+                ).mappings().first()
+
+                entries = []
+
+                if event:
+                    entries = conn.execute(
+                        text("""
+                            SELECT
+                                rank,
+                                item_text,
+                                reveal_order
+                            FROM overtime_top_list_items
+                            WHERE event_id = :event_id
+                            ORDER BY rank DESC, id
+                        """),
+                        {"event_id": event["id"]}
+                    ).mappings().all()
 
                 formatted_segments.append({
                     "segment_type": raw_type,
+                    "event": dict(event) if event else None,
                     "entries": [dict(e) for e in entries]
                 })
-
             else:
                 formatted_segments.append({
                     "segment_type": raw_type,

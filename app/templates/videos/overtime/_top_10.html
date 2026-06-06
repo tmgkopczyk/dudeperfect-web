@@ -2,16 +2,35 @@
 
   <div class="font-semibold text-lg">
     {{ segment.segment_type }}
+    {% if segment.event and segment.event.title %}
+      – {{ segment.event.title }}
+    {% endif %}
   </div>
 
+  {% if segment.event and segment.event.presenter_name %}
+    <div class="text-sm text-neutral-500">
+      Presented by {{ segment.event.presenter_name }}
+    </div>
+  {% endif %}
+
   {% if segment.entries %}
-    <ol class="list-decimal ml-6 space-y-1 text-sm">
+    <div class="space-y-2">
+
       {% for entry in segment.entries %}
-        <li>
-          {{ entry.selection }}
-        </li>
+        <div class="flex gap-3 border rounded px-3 py-2">
+
+          <div class="font-semibold text-neutral-600 w-8 text-right">
+            {{ entry.rank }}
+          </div>
+
+          <div class="flex-1">
+            {{ entry.item_text }}
+          </div>
+
+        </div>
       {% endfor %}
-    </ol>
+
+    </div>
   {% else %}
     <div class="text-sm text-neutral-500 italic">
       No structured data recorded yet.
