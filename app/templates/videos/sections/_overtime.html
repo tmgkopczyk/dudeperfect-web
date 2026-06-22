@@ -18,37 +18,55 @@
       {# Template aliases #}
       {% if normalized in ["top_10", "top_15", "not_top_10"] %}
         {% set normalized = "top_list" %}
+      {% elif normalized in ["get_crafty", "get_un_crafty"] %}
+        {% set normalized = "get_crafty" %}
       {% endif %}
 
       {% set template_path = "videos/overtime/_" ~ normalized ~ ".html" %}
 
-      {# Try specific template first #}
       {% include template_path ignore missing %}
 
-      {# If specific template does NOT exist, render fallback #}
       {% if not (
-          normalized in [
-            "cool_not_cool",
-            "wheel_unfortunate",
-            "wheel_fortunate",
-            "betcha",
-            "get_crafty",
-            "get_un_crafty",
-            "game_time",
-            "absurd_recurds",
-            "judge_dudy",
-            "top_list"
-          ]
-      ) %}
-        <div class="border rounded-lg p-4 bg-white">
-          <div class="font-semibold text-lg">
-            {{ segment.segment_type }}
-          </div>
-          <div class="text-sm text-neutral-500 italic">
-            No structured data recorded yet.
-          </div>
-        </div>
-      {% endif %}
+    normalized in [
+      "cool_not_cool",
+      "wheel_unfortunate",
+      "wheel_fortunate",
+      "betcha",
+      "get_crafty",
+      "game_time",
+      "absurd_recurds",
+      "judge_dudy",
+      "top_list",
+      "taste_test",
+      "wives_vs_chad",
+      "culture_clash"
+    ]
+) %}
+  {% set segment_title = segment.segment_type %}
+  {% if segment.segment_type == "Misc Segment" %}
+    {% if segment.title %}
+      {% set segment_title = segment.title %}
+    {% elif segment.notes %}
+      {% set segment_title = segment.notes %}
+    {% endif %}
+  {% endif %}
+
+  <div class="border rounded-lg p-4 bg-white">
+    <div class="font-semibold text-lg">
+      {{ segment_title }}
+    </div>
+
+    {% if segment.segment_type == "Misc Segment" %}
+      <div class="text-sm text-neutral-500">
+        Misc Segment
+      </div>
+    {% endif %}
+
+    <div class="text-sm text-neutral-500 italic">
+      No structured data recorded yet.
+    </div>
+  </div>
+{% endif %}
 
     {% endfor %}
 

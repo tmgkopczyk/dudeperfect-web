@@ -1,0 +1,93 @@
+<div class="border rounded-lg p-4 bg-white space-y-3">
+
+  <div class="font-semibold text-lg">
+    {{ segment.segment_type }}
+    {% if segment.event and segment.event.theme %}
+      – {{ segment.event.theme }}
+    {% endif %}
+  </div>
+
+  {% if segment.event and segment.event.winner %}
+    <div class="text-sm text-neutral-500">
+      Winner:
+      {% if segment.event.winner == "wives" %}
+        Wives 👩
+      {% elif segment.event.winner == "chad" %}
+        Chad 😎
+      {% elif segment.event.winner == "none" %}
+        Knowledge 🧠
+      {% else %}
+        {{ segment.event.winner }}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if segment.questions %}
+
+    {% set current_round = namespace(name='') %}
+
+    {% for question in segment.questions %}
+
+      {% if question.round_name != current_round.name %}
+        {% set current_round.name = question.round_name %}
+
+        <div class="pt-2 border-t">
+          <div class="font-semibold text-neutral-700">
+            {{ question.round_name }}
+          </div>
+        </div>
+
+      {% endif %}
+
+      <div class="border rounded px-3 py-2 space-y-2">
+
+        <div class="font-medium">
+          {{ question.question_order }}.
+          {{ question.question_text }}
+        </div>
+
+        {% if question.wives_answer %}
+          <div>
+            <strong>Wives:</strong>
+            {{ question.wives_answer }}
+
+            {% if question.wives_correct %}
+              <span class="text-green-600 font-semibold">✓</span>
+            {% else %}
+              <span class="text-red-600 font-semibold">✗</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if question.chad_answer %}
+          <div>
+            <strong>Chad:</strong>
+            {{ question.chad_answer }}
+
+            {% if question.chad_correct %}
+              <span class="text-green-600 font-semibold">✓</span>
+            {% else %}
+              <span class="text-red-600 font-semibold">✗</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if question.correct_answer %}
+          <div class="text-sm text-neutral-500">
+            Answer: {{ question.correct_answer }}
+          </div>
+        {% endif %}
+
+      </div>
+
+    {% endfor %}
+
+  {% else %}
+
+    <div class="text-sm text-neutral-500 italic">
+      No structured data recorded yet.
+    </div>
+
+  {% endif %}
+
+</div>

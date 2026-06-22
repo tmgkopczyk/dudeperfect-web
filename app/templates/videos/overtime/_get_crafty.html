@@ -15,27 +15,35 @@
 
     <div class="grid gap-2">
         {% for participant in segment.participants %}
-        <div class="flex justify-between border rounded px-3 py-2">
+        <div class="flex justify-between items-center border rounded px-3 py-2 gap-4">
 
-            <div>
-                <div class="font-medium">
-                    {{ participant.player_name }}
+            <div class="font-medium">
+                {{ participant.player_name }}
+            </div>
+
+            {% if participant.placement is not none %}
+                <div class="text-right">
+                    {% if participant.placement == 1 %}
+                        <span class="text-green-600 font-semibold">
+                            🏆 1st Place
+                        </span>
+                    {% elif participant.placement == 2 %}
+                        <span>🥈 2nd Place</span>
+                    {% elif participant.placement == 3 %}
+                        <span>🥉 3rd Place</span>
+                    {% else %}
+                        {% set n = participant.placement %}
+                        <span>
+                            {{ n }}{% if n % 100 in [11, 12, 13] %}th{% elif n % 10 == 1 %}st{% elif n % 10 == 2 %}nd{% elif n % 10 == 3 %}rd{% else %}th{% endif %} Place
+                        </span>
+                    {% endif %}
                 </div>
-            </div>
 
-            <div class="text-right">
-                {% if participant.placement == 1 %}
-                    <span class="text-green-600 font-semibold">
-                        🏆 1st Place
-                    </span>
-                {% elif participant.placement == 2 %}
-                    <span>🥈 2nd Place</span>
-                {% elif participant.placement == 3 %}
-                    <span>🥉 3rd Place</span>
-                {% else %}
-                    <span>{{ participant.placement }}th Place</span>
-                {% endif %}
-            </div>
+            {% elif participant.notes %}
+                <div class="text-right text-sm text-neutral-500 italic">
+                    {{ participant.notes }}
+                </div>
+            {% endif %}
 
         </div>
         {% endfor %}

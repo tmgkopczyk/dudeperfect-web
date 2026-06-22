@@ -1,0 +1,88 @@
+<div class="border rounded-lg p-4 bg-white space-y-3">
+
+  <div class="font-semibold text-lg">
+    🥄 Taste Test
+    {% if segment.event and segment.event.food_item %}
+      – {{ segment.event.food_item }}
+    {% endif %}
+  </div>
+
+  {% if segment.event and segment.event.participant_name %}
+    <div class="text-sm text-neutral-500">
+      Participant: {{ segment.event.participant_name }}
+    </div>
+  {% endif %}
+
+  {% if segment.rankings %}
+
+  <div class="space-y-2">
+
+    {% for sample in segment.rankings %}
+
+      <div class="border rounded px-3 py-2">
+
+        <div class="font-semibold text-neutral-600">
+          #{{ sample.placement }}
+        </div>
+
+        {% if sample.guess_correct %}
+          <div class="text-green-600 font-semibold">
+            Guessed {{ sample.actual_item }}
+            as {{ sample.guessed_item }}
+            — Correct
+          </div>
+        {% else %}
+          <div class="text-red-600 font-semibold">
+            Guessed {{ sample.actual_item }}
+            as {{ sample.guessed_item }}
+            — Incorrect
+          </div>
+        {% endif %}
+
+      </div>
+
+    {% endfor %}
+
+  </div>
+
+  {% elif segment.samples %}
+
+    <div class="space-y-2">
+
+      {% for sample in segment.samples %}
+
+        <div class="border rounded px-3 py-2">
+
+          <div class="font-semibold text-neutral-600">
+            Sample {{ sample.sample_label }}
+          </div>
+
+          {% if sample.guess_correct %}
+            <div class="text-green-600 font-semibold">
+              {{ sample.actual_item }}
+              → {{ sample.guessed_item }}
+              — Correct
+            </div>
+          {% else %}
+            <div class="text-red-600 font-semibold">
+              {{ sample.actual_item }}
+              → {{ sample.guessed_item }}
+              — Incorrect
+            </div>
+          {% endif %}
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+  {% else %}
+
+    <div class="text-sm text-neutral-500 italic">
+      No structured data recorded yet.
+    </div>
+
+  {% endif %}
+
+</div>

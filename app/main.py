@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Request, Query, Form, HTTPException, APIRouter, status
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from typing import Optional
 import requests
 import os
+from starlette.middleware.sessions import SessionMiddleware
 
 from . import queries
 from .sitemap import router as sitemap_router
@@ -21,6 +22,10 @@ BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI(
     title="Dude Perfect Music DB",
     version="0.1.0",
+)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY","")
 )
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -73,6 +78,13 @@ def verify_turnstile(token: str, remote_ip: Optional[str] = None) -> bool:
     except requests.RequestException:
         return False
 
+def require_admin(request: Request):
+    if not request.session.get("admin"):
+        return RedirectResponse(
+            "/admin/login",
+            status_code=302
+        )
+    return None
 
 # =========================
 # Static / misc
@@ -139,6 +151,79 @@ def contact_submit(
 
     return render(request, "contact_success.html")
 
+@pages.get("/admin", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+
+    return templates.TemplateResponse(
+        "admin/index.html",
+        {"request": request}
+    )
+
+@pages.get("/admin/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request):
+
+    if request.session.get("admin"):
+        return RedirectResponse(
+            "/admin",
+            status_code=302
+        )
+
+    return templates.TemplateResponse(
+        "admin/login.html",
+        {
+            "request": request,
+            "error": None
+        }
+    )
+
+@pages.get("/admin/logout")
+async def admin_logout(request: Request):
+
+    request.session.clear()
+
+    return RedirectResponse(
+        "/admin/login",
+        status_code=302
+    )
+
+@pages.post("/admin/login")
+async def admin_login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...)
+):
+
+    print("Submitted username:", repr(username))
+    print("Expected username:", repr(os.getenv("ADMIN_USERNAME")))
+    print("Username match:", username == os.getenv("ADMIN_USERNAME"))
+
+    print("Submitted password:", repr(password))
+    print("Expected password:", repr(os.getenv("ADMIN_PASSWORD")))
+    print("Password match:", password == os.getenv("ADMIN_PASSWORD"))
+
+    if (
+        username == os.getenv("ADMIN_USERNAME")
+        and password == os.getenv("ADMIN_PASSWORD")
+    ):
+        request.session["admin"] = True
+
+        return RedirectResponse(
+            "/admin",
+            status_code=302
+        )
+
+    return templates.TemplateResponse(
+        "admin/login.html",
+        {
+            "request": request,
+            "error": "Invalid username or password",
+            "turnstile_site_key": TURNSTILE_SITE_KEY
+        }
+    )
 
 # =========================
 # Songs

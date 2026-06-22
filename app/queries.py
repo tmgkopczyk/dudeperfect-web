@@ -135,6 +135,8 @@ def get_overtime_view(video_id: int):
             text("""
                 SELECT
                     os.id,
+                    os.title,
+                    os.notes,
                     st.name,
                     st.canonical_name
                 FROM overtime_segments os
@@ -145,7 +147,6 @@ def get_overtime_view(video_id: int):
             """),
             {"episode_id": episode["id"]}
         ).mappings().all()
-
 
         if not segments:
             return None
@@ -315,14 +316,17 @@ def get_overtime_view(video_id: int):
                     text("""
                         SELECT
                             p.name AS player_name,
-                            gp.placement
+                            gp.placement,
+                            gp.notes
                         FROM overtime_get_crafty_participants gp
                         JOIN players p
-                        ON p.id = gp.player_id
+                            ON p.id = gp.player_id
                         JOIN overtime_get_crafty_events ge
-                        ON ge.id = gp.event_id
+                            ON ge.id = gp.event_id
                         WHERE ge.segment_id = :segment_id
-                        ORDER BY gp.placement
+                        ORDER BY
+                            gp.placement NULLS LAST,
+                            p.name
                     """),
                     {"segment_id": segment_id}
                 ).mappings().all()
@@ -466,22 +470,32 @@ def get_overtime_view(video_id: int):
                     entries = conn.execute(
                         text("""
                             SELECT
-                                rank,
-                                item_text,
-                                item_type,
-                                reveal_order
-                            FROM overtime_top_list_items
-                            WHERE event_id = :event_id
+                                i.id,
+                                i.rank,
+                                i.rank_display,
+                                i.item_text,
+                                i.item_type,
+                                i.reveal_order,
+                                m.media_type,
+                                m.media_url,
+                                m.alt_text
+                            FROM overtime_top_list_items i
+                            LEFT JOIN overtime_top_list_item_media m
+                                ON m.item_id = i.id
+                            WHERE i.event_id = :event_id
                             ORDER BY
-                                CASE
-                                    WHEN item_type = 'ranked' THEN 0
-                                    ELSE 1
-                                END,
-                                rank DESC NULLS LAST,
-                                item_text
+                            CASE
+                                WHEN i.item_type = 'ranked' THEN 0
+                                ELSE 1
+                            END,
+                            i.reveal_order ASC NULLS LAST
                         """),
                         {"event_id": event["id"]}
                     ).mappings().all()
+
+                    for e in entries:
+                        if e["item_text"] == "Cody Wing Walking":
+                            print(dict(e))
 
                 formatted_segments.append({
                     "segment_type": raw_type,
@@ -495,9 +509,209 @@ def get_overtime_view(video_id: int):
                         if e["item_type"] == "honorable_mention"
                     ]
                 })
+            elif canonical_type == "Taste Test":
+
+                event = conn.execute(
+                    text("""
+                        SELECT
+                            e.id,
+                            e.food_item,
+                            p.name AS participant_name
+                        FROM overtime_taste_test_events e
+                        LEFT JOIN players p
+                            ON p.id = e.participant_id
+                        WHERE e.segment_id = :segment_id
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+                samples = []
+                rankings = []
+
+                if event:
+
+                    samples = conn.execute(
+                        text("""
+                            SELECT
+                                sample_label,
+                                actual_item,
+                                guessed_item,
+                                LOWER(actual_item) = LOWER(guessed_item) AS guess_correct
+                            FROM overtime_taste_test_samples
+                            WHERE event_id = :event_id
+                            ORDER BY sample_label
+                        """),
+                        {"event_id": event["id"]}
+                    ).mappings().all()
+
+                    rankings = conn.execute(
+                        text("""
+                            SELECT
+                                r.placement,
+                                s.sample_label,
+                                s.actual_item,
+                                s.guessed_item,
+                                LOWER(s.actual_item) = LOWER(s.guessed_item) AS guess_correct
+                            FROM overtime_taste_test_rankings r
+                            JOIN overtime_taste_test_samples s
+                                ON s.id = r.sample_id
+                            WHERE s.event_id = :event_id
+                            ORDER BY r.placement
+                        """),
+                        {"event_id": event["id"]}
+                    ).mappings().all()
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "event": dict(event) if event else None,
+                    "rankings": [dict(r) for r in rankings],
+                    "samples": [dict(s) for s in samples]
+                })
+            elif canonical_type == "Wives vs Chad":
+                event = conn.execute(
+                    text("""
+                        SELECT
+                            id,
+                            theme,
+                            winner,
+                            notes
+                        FROM overtime_wives_vs_chad_events
+                        WHERE segment_id = :segment_id
+                        LIMIT 1
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                questions = []
+
+                if event:
+                    questions = conn.execute(
+                        text("""
+                            SELECT
+                                question_order,
+                                round_name,
+                                question_text,
+                                wives_answer,
+                                chad_answer,
+                                correct_answer,
+                                wives_correct,
+                                chad_correct,
+                                notes
+                            FROM overtime_wives_vs_chad_questions
+                            WHERE event_id = :event_id
+                            ORDER BY question_order
+                        """),
+                        {"event_id": event["id"]}
+                    ).mappings().all()
+
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "event": dict(event) if event else None,
+                    "questions": [dict(q) for q in questions]
+                })
+            elif canonical_type == "Culture Clash":
+                print(segment)
+                event = conn.execute(
+                    text("""
+                        SELECT
+                            e.id,
+
+                            c1.name AS team_a_country,
+                            c1.flag_emoji AS team_a_flag,
+
+                            c2.name AS team_b_country,
+                            c2.flag_emoji AS team_b_flag,
+
+                            e.notes
+                        FROM culture_clash_events e
+                        LEFT JOIN countries c1
+                            ON c1.id = e.team_a_country_id
+                        LEFT JOIN countries c2
+                            ON c2.id = e.team_b_country_id
+                        WHERE e.segment_id = :segment_id
+                        LIMIT 1
+                    """),
+                    {
+                        "segment_id": segment["id"]
+                    }
+                ).mappings().first()
+                print(event)
+                if event:
+
+                    item_rows = conn.execute(
+                        text("""
+                            SELECT
+                                i.id,
+                                i.item_order,
+                                i.food_name,
+                                i.correct_name,
+
+                                c.name AS country_name,
+                                c.flag_emoji,
+
+                                i.points,
+                                i.notes
+                            FROM culture_clash_items i
+                            JOIN countries c
+                                ON c.id = i.country_id
+                            WHERE i.event_id = :event_id
+                            ORDER BY i.item_order
+                        """),
+                        {
+                            "event_id": event["id"]
+                        }
+                    ).mappings().all()
+
+                    culture_clash_items = []
+
+                    for item in item_rows:
+
+                        guess_rows = conn.execute(
+                            text("""
+                                SELECT
+                                    p.name AS player_name,
+                                    g.guess_text,
+                                    g.is_correct,
+                                    g.notes
+                                FROM culture_clash_guesses g
+                                JOIN players p
+                                    ON p.id = g.player_id
+                                WHERE g.item_id = :item_id
+                                ORDER BY p.name
+                            """),
+                            {
+                                "item_id": item["id"]
+                            }
+                        ).mappings().all()
+
+                        culture_clash_items.append({
+                            "item_order": item["item_order"],
+                            "food_name": item["food_name"],
+                            "correct_name": item["correct_name"],
+                            "country_name": item["country_name"],
+                            "flag_emoji": item["flag_emoji"],
+                            "guesses": [
+                                dict(g)
+                                for g in guess_rows
+                            ]
+                        })
+
+                    formatted_segments.append({
+                        "segment_type": raw_type,
+                        "event": {
+                            "team_a_country": event["team_a_country"],
+                            "team_a_flag": event["team_a_flag"],
+
+                            "team_b_country": event["team_b_country"],
+                            "team_b_flag": event["team_b_flag"],
+
+                            "notes": event["notes"]
+                        },
+                        "items": culture_clash_items
+                    })
             else:
                 formatted_segments.append({
                     "segment_type": raw_type,
+                    "title": segment["title"],
+                    "notes": segment["notes"],
                     "data": None
                 })
 
@@ -614,10 +828,14 @@ def get_stereotypes_view(video_id: int):
         }
 
 def get_song_detail(song_id: int):
-    sql = text("""SELECT
+    sql = text("""
+    SELECT
         s.id               AS song_id,
         s.title            AS song_title,
         s.spotify_track_id AS spotify_track_id,
+        s.source_type      AS source_type,
+        s.source_url       AS source_url,
+        s.notes            AS notes,
 
         a.name             AS artist_name,
         sa.artist_order    AS artist_order,
@@ -626,14 +844,14 @@ def get_song_detail(song_id: int):
         v.title            AS video_title,
         v.youtube_video_id AS youtube_video_id
 
-        FROM songs s
-        LEFT JOIN song_artists sa ON sa.song_id = s.id
-        LEFT JOIN artists a       ON a.id = sa.artist_id
-        LEFT JOIN video_songs vs  ON vs.song_id = s.id
-        LEFT JOIN videos v        ON v.id = vs.video_id
+    FROM songs s
+    LEFT JOIN song_artists sa ON sa.song_id = s.id
+    LEFT JOIN artists a       ON a.id = sa.artist_id
+    LEFT JOIN video_songs vs  ON vs.song_id = s.id
+    LEFT JOIN videos v        ON v.id = vs.video_id
 
-        WHERE s.id = :song_id
-        ORDER BY sa.artist_order, v.published_at;
+    WHERE s.id = :song_id
+    ORDER BY sa.artist_order, v.published_at;
     """)
 
     with engine.connect() as conn:
@@ -643,11 +861,14 @@ def get_song_detail(song_id: int):
         return None
 
     song = {
-        "id": rows[0]["song_id"],
-        "title": rows[0]["song_title"],
-        "spotify_track_id": rows[0]["spotify_track_id"],
-        "artists": [],
-        "videos": []
+    "id": rows[0]["song_id"],
+    "title": rows[0]["song_title"],
+    "spotify_track_id": rows[0]["spotify_track_id"],
+    "source_type": rows[0]["source_type"],
+    "source_url": rows[0]["source_url"],
+    "notes": rows[0]["notes"],
+    "artists": [],
+    "videos": []
     }
 
     seen_artists = set()
@@ -1085,6 +1306,7 @@ def list_players():
         FROM players
         WHERE slug IS NOT NULL
         ORDER BY id
+        LIMIT 5
     """)
 
     with engine.connect() as conn:
