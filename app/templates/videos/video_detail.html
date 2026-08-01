@@ -68,25 +68,45 @@
   <div class="border-b border-neutral-200">
     <nav class="flex gap-6 text-sm font-medium">
 
-      <button id="tab-overview" onclick="showTab('overview')" class="tab-btn text-[#2EFCE6] pb-2 border-b-2 border-[#2EFCE6]">
-        Overview
-      </button>
+        <button
+    type="button"
+    id="tab-overview"
+    onclick="showTab('overview')"
+    class="tab-btn text-[#2EFCE6] pb-2 border-b-2 border-[#2EFCE6]"
+  >
+    Overview
+  </button>
 
-      {% if battle %}
-      <button id="tab-battle" onclick="showTab('battle')" class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]">
-        Battle
-      </button>
-      {% endif %}
+  {% if battle %}
+  <button
+    type="button"
+    id="tab-battle"
+    onclick="showTab('battle')"
+    class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
+  >
+    Battle
+  </button>
+  {% endif %}
 
-      {% if overtime %}
-      <button id="tab-overtime" onclick="showTab('overtime')" class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]">
-        Overtime
-      </button>
-      {% endif %}
+  {% if overtime %}
+  <button
+    type="button"
+    id="tab-overtime"
+    onclick="showTab('overtime')"
+    class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
+  >
+    Overtime
+  </button>
+  {% endif %}
 
-      <button id="tab-songs" onclick="showTab('songs')" class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]">
-        Songs
-      </button>
+  <button
+    type="button"
+    id="tab-songs"
+    onclick="showTab('songs')"
+    class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
+  >
+    Songs
+  </button>
 
     </nav>
   </div>
@@ -113,21 +133,40 @@
   <div id="tab-content-battle" class="tab-content hidden space-y-6">
   {% if battle %}
 
-    <section class="space-y-3">
-      <h3 class="text-lg font-medium text-neutral-900">Players</h3>
+    <section class="space-y-4">
+      <h3 class="text-lg font-medium text-neutral-900">
+        {% if battle.teams|length == 1 %}
+          Players
+        {% else %}
+          Teams
+        {% endif %}
+      </h3>
 
-      <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-        {% for team in battle.teams %}
-          {% for player in team.players %}
-            <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
-              {% if player.is_guest %}
-                <span title="Guest">⭐</span>
-              {% endif %}
-              {{ player.name }}
-            </li>
-          {% endfor %}
-        {% endfor %}
-      </ul>
+      {% for team in battle.teams %}
+
+        <div class="space-y-3">
+
+          {% if battle.teams|length > 1 %}
+            <h4 class="font-semibold text-neutral-700 border-b pb-1">
+              {{ team.name }}
+            </h4>
+          {% endif %}
+
+          <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            {% for player in team.players %}
+              <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
+                {% if player.is_guest %}
+                  <span title="Guest">⭐</span>
+                {% endif %}
+                {{ player.name }}
+              </li>
+            {% endfor %}
+          </ul>
+
+        </div>
+
+      {% endfor %}
+
     </section>
 
     {% if battle.timeline %}
@@ -206,8 +245,10 @@
 </section>
 
 <script>
-function showTab(name) {
-  location.hash = name;
+function showTab(name, updateUrl = true) {
+  if (updateUrl) {
+    history.replaceState(null, "", "#" + name);
+  }
 
   document.querySelectorAll('.tab-content').forEach(el => {
     el.classList.add('hidden');
@@ -227,7 +268,7 @@ function showTab(name) {
 
 window.addEventListener('load', () => {
   const tab = location.hash.replace('#', '') || 'overview';
-  showTab(tab);
+  showTab(tab, false);
 });
 </script>
 

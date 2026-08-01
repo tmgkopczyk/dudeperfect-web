@@ -12,6 +12,11 @@
             {{ segment.event.description }}
         </div>
     {% endif %}
+    {% if segment.event and segment.event.notes %}
+    <div class="text-sm text-neutral-600">
+        {{ segment.event.notes }}
+    </div>
+    {% endif %}
 
     <div class="grid gap-2">
         {% for participant in segment.participants %}

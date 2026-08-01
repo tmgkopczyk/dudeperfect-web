@@ -19,11 +19,17 @@
     {% endif %}
 
     {% if segment.case.participants.plaintiff %}
-        <div><strong>Plaintiff:</strong> {{ segment.case.participants.plaintiff }}</div>
+        <div>
+            <strong>Plaintiff:</strong>
+            {{ segment.case.participants.plaintiff | join(", ") }}
+        </div>
     {% endif %}
 
     {% if segment.case.participants.defendant %}
-        <div><strong>Defendant:</strong> {{ segment.case.participants.defendant }}</div>
+        <div>
+            <strong>Defendant:</strong>
+            {{ segment.case.participants.defendant | join(", ") }}
+        </div>
     {% endif %}
 
     </div>

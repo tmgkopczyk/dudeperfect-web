@@ -30,24 +30,79 @@ def get_battle_view(video_id: int):
             return None
 
         # =========================
-        # 2️⃣ Players
+        # 2️⃣ Teams / Players
         # =========================
-        players = conn.execute(
+
+        team_rows = conn.execute(
             text("""
                 SELECT
-                    name,
-                    is_guest,
-                    notes
-                FROM battle_players
+                    id,
+                    name
+                FROM battle_teams
                 WHERE battle_id = :battle_id
-                ORDER BY is_guest, name
+                ORDER BY id
             """),
             {"battle_id": battle_row["battle_id"]}
         ).mappings().all()
 
+        teams = []
+
+        if team_rows:
+            # Team battle
+            for team in team_rows:
+
+                members = conn.execute(
+                    text("""
+                        SELECT
+                            p.name,
+                            NOT p.is_core_member AS is_guest,
+                            bp.notes
+                        FROM battle_team_members btm
+                        JOIN battle_players bp
+                            ON bp.id = btm.battle_player_id
+                        JOIN players p
+                            ON p.id = bp.player_id
+                        WHERE btm.team_id = :team_id
+                        ORDER BY
+                            p.is_core_member DESC,
+                            p.name
+                    """),
+                    {"team_id": team["id"]}
+                ).mappings().all()
+
+                teams.append({
+                    "name": team["name"],
+                    "players": [dict(x) for x in members]
+                })
+
+        else:
+            # Individual battle
+            players = conn.execute(
+                text("""
+                    SELECT
+                        p.name,
+                        NOT p.is_core_member AS is_guest,
+                        bp.notes
+                    FROM battle_players bp
+                    JOIN players p
+                        ON p.id = bp.player_id
+                    WHERE bp.battle_id = :battle_id
+                    ORDER BY
+                        p.is_core_member DESC,
+                        p.name
+                """),
+                {"battle_id": battle_row["battle_id"]}
+            ).mappings().all()
+
+            teams.append({
+                "name": "Players",
+                "players": [dict(x) for x in players]
+            })
+
         # =========================
         # 3️⃣ Rounds
         # =========================
+
         rounds = conn.execute(
             text("""
                 SELECT
@@ -67,24 +122,26 @@ def get_battle_view(video_id: int):
         for r in rounds:
             results = conn.execute(
                 text("""
-                        SELECT
-                            COALESCE(bp.name, bt.name) AS name,
-                            brp.status,
-                            brp.placement,
-                            brp.score,
-                            brp.notes
-                        FROM battle_round_participants brp
-                        LEFT JOIN battle_players bp
-                            ON brp.battle_player_id = bp.id
-                        LEFT JOIN battle_teams bt
-                            ON brp.battle_team_id = bt.id
-                        WHERE brp.battle_round_id = :round_id
-                        ORDER BY brp.placement NULLS LAST,
-                                COALESCE(bp.name, bt.name)
-                    """),
-                    {"round_id": r["id"]}
-                ).mappings().all()
-
+                    SELECT
+                        COALESCE(p.name, bt.name) AS name,
+                        brp.status,
+                        brp.placement,
+                        brp.score,
+                        brp.notes
+                    FROM battle_round_participants brp
+                    LEFT JOIN battle_players bp
+                        ON brp.battle_player_id = bp.id
+                    LEFT JOIN players p
+                        ON bp.player_id = p.id
+                    LEFT JOIN battle_teams bt
+                        ON brp.battle_team_id = bt.id
+                    WHERE brp.battle_round_id = :round_id
+                    ORDER BY
+                        brp.placement NULLS LAST,
+                        COALESCE(p.name, bt.name)
+                """),
+                {"round_id": r["id"]}
+            ).mappings().all()
 
             timeline.append({
                 "name": r["name"],
@@ -95,6 +152,7 @@ def get_battle_view(video_id: int):
     # =========================
     # 4️⃣ Shape data for template
     # =========================
+
     return {
         "id": battle_row["battle_id"],
         "title": battle_row["title"],
@@ -103,12 +161,7 @@ def get_battle_view(video_id: int):
         "description": battle_row["description"],
         "rules": battle_row["rules"],
         "notes": battle_row["notes"],
-        "teams": [
-            {
-                "name": "Players",
-                "players": [dict(p) for p in players]
-            }
-        ],
+        "teams": teams,
         "timeline": timeline,
         "final_standings": []
     }
@@ -199,17 +252,20 @@ def get_overtime_view(video_id: int):
                     vote_values = [v["vote"] for v in votes]
                     cool_count = vote_values.count("cool")
                     not_cool_count = vote_values.count("not_cool")
+                    total_votes = len(vote_values)
 
                     overall = None
 
-                    if cool_count == 5:
+                    if total_votes > 0 and cool_count == total_votes:
                         overall = "super_cool"
-                    elif not_cool_count == 5:
+                    elif total_votes > 0 and not_cool_count == total_votes:
                         overall = "super_not_cool"
                     elif cool_count > not_cool_count:
                         overall = "cool"
                     elif not_cool_count > cool_count:
                         overall = "not_cool"
+                    elif cool_count == not_cool_count:
+                        overall = "tie"
 
 
                     formatted_items.append({
@@ -305,7 +361,8 @@ def get_overtime_view(video_id: int):
                         SELECT
                             challenge_name,
                             description,
-                            winner_id
+                            winner_id,
+                            notes
                         FROM overtime_get_crafty_events
                         WHERE segment_id = :segment_id
                     """),
@@ -436,10 +493,15 @@ def get_overtime_view(video_id: int):
                     ).mappings().all()
 
                 # Convert participants into role dictionary
-                role_map = {}
-                for p in participants:
-                    role_map[p["role"]] = p["name"]
+                
+                role_map = defaultdict(list)
 
+                for p in participants:
+                    role_map[p["role"]].append(p["name"])
+
+                role_map = dict(role_map)
+
+                
                 formatted_segments.append({
                     "segment_type": raw_type,
                     "case": {
@@ -484,18 +546,15 @@ def get_overtime_view(video_id: int):
                                 ON m.item_id = i.id
                             WHERE i.event_id = :event_id
                             ORDER BY
-                            CASE
-                                WHEN i.item_type = 'ranked' THEN 0
-                                ELSE 1
-                            END,
-                            i.reveal_order ASC NULLS LAST
+                                CASE
+                                    WHEN i.item_type = 'ranked' THEN 0
+                                    ELSE 1
+                                END,
+                                i.rank DESC,
+                                i.reveal_order ASC NULLS LAST;
                         """),
                         {"event_id": event["id"]}
                     ).mappings().all()
-
-                    for e in entries:
-                        if e["item_text"] == "Cody Wing Walking":
-                            print(dict(e))
 
                 formatted_segments.append({
                     "segment_type": raw_type,
@@ -707,6 +766,89 @@ def get_overtime_view(video_id: int):
                         },
                         "items": culture_clash_items
                     })
+            elif canonical_type == "Commercial Clash":
+                event = conn.execute(
+                    text("""
+                        SELECT
+                            id,
+                            sponsor_name,
+                            notes
+                        FROM overtime_commercial_clash_events
+                        WHERE segment_id = :segment_id
+                        LIMIT 1
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                teams = []
+                requirements = []
+
+                if event:
+
+                    # Challenge requirements
+                    requirements = conn.execute(
+                        text("""
+                            SELECT
+                                requirement_order,
+                                requirement_text
+                            FROM overtime_commercial_clash_requirements
+                            WHERE event_id = :event_id
+                            ORDER BY requirement_order
+                        """),
+                        {"event_id": event["id"]}
+                    ).mappings().all()
+
+                    # Teams
+                    team_rows = conn.execute(
+                        text("""
+                            SELECT
+                                id,
+                                team_number,
+                                commercial_theme,
+                                commercial_title,
+                                commercial_summary,
+                                is_winner,
+                                notes
+                            FROM overtime_commercial_clash_teams
+                            WHERE event_id = :event_id
+                            ORDER BY team_number
+                        """),
+                        {"event_id": event["id"]}
+                    ).mappings().all()
+
+                    for team in team_rows:
+
+                        members = conn.execute(
+                            text("""
+                                SELECT
+                                    p.name AS player_name
+                                FROM overtime_commercial_clash_team_members tm
+                                JOIN players p
+                                    ON p.id = tm.player_id
+                                WHERE tm.team_id = :team_id
+                                ORDER BY p.name
+                            """),
+                            {"team_id": team["id"]}
+                        ).mappings().all()
+
+                        teams.append({
+                            "team_number": team["team_number"],
+                            "commercial_theme": team["commercial_theme"],
+                            "commercial_title": team["commercial_title"],
+                            "commercial_summary": team["commercial_summary"],
+                            "is_winner": team["is_winner"],
+                            "notes": team["notes"],
+                            "members": [dict(m) for m in members]
+                        })
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "event": {
+                        "sponsor_name": event["sponsor_name"],
+                        "notes": event["notes"]
+                    } if event else None,
+                    "requirements": [dict(r) for r in requirements],
+                    "teams": teams
+                })
             else:
                 formatted_segments.append({
                     "segment_type": raw_type,
