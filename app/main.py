@@ -7,6 +7,7 @@ from typing import Optional
 import requests
 import os
 from starlette.middleware.sessions import SessionMiddleware
+import math
 
 from . import queries
 from .sitemap import router as sitemap_router
@@ -229,10 +230,41 @@ async def admin_login(
 # Songs
 # =========================
 
+#new
 @pages.get("/songs", response_class=HTMLResponse)
 def songs_page(request: Request, q: Optional[str] = None):
-    results = queries.search_songs(q) if q else None
-    return render(request, "songs/songs.html", {"results": results, "query": q})
+    if q:
+        results = queries.search_songs(q)
+        songs = None
+    else:
+        results = None
+        songs = queries.get_all_songs()
+
+    #print(f"query={q!r}")
+    #print(f"songs={len(songs) if songs else 0}")
+
+    available_letters = sorted({
+        song["title"][0].upper()
+        for song in songs or []
+        if song["title"]
+    })
+
+    return render(
+        request,
+        "songs/songs.html",
+        {
+            "results": results,
+            "songs": songs,
+            "available_letters": available_letters,
+            "query": q,
+        },
+    )
+#Original
+
+#@pages.get("/songs", response_class=HTMLResponse)
+#def songs_page(request: Request, q: Optional[str] = None):
+#    results = queries.search_songs(q) if q else None
+#    return render(request, "songs/songs.html", {"results": results, "query": q})
 
 
 @pages.get("/songs/{song_id}", response_class=HTMLResponse)
@@ -249,8 +281,29 @@ def song_detail(request: Request, song_id: int):
 
 @pages.get("/artists", response_class=HTMLResponse)
 def artists_page(request: Request, q: Optional[str] = None):
-    results = queries.search_artists(q) if q else None
-    return render(request, "artists/artists.html", {"results": results, "query": q})
+    if q:
+        results = queries.search_artists(q)
+        artists = None
+    else:
+        results = None
+        artists = queries.get_all_artists()
+
+    available_letters = sorted({
+        artist["name"][0].upper()
+        for artist in artists or []
+        if artist["name"]
+    })
+
+    return render(
+        request,
+        "artists/artists.html",
+        {
+            "results": results,
+            "artists": artists,
+            "available_letters": available_letters,
+            "query": q,
+        },
+    )
 
 
 @pages.get("/artists/{artist_id}", response_class=HTMLResponse)
@@ -292,10 +345,39 @@ def players_index(request: Request):
 # =========================
 
 @pages.get("/videos", response_class=HTMLResponse)
-def videos_page(request: Request, q: Optional[str] = None):
-    results = queries.search_videos(q) if q else None
-    return render(request, "videos/videos.html", {"results": results, "query": q})
+def videos_page(
+    request: Request,
+    q: Optional[str] = None,
+    page: int = 1
+):
+    PER_PAGE = 50
 
+    if q:
+        results = queries.search_videos(q)
+        videos = None
+        total_pages = None
+    else:
+        results = None
+
+        total = queries.get_video_count()
+        total_pages = math.ceil(total / PER_PAGE)
+
+        videos = queries.get_videos(
+            limit=PER_PAGE,
+            offset=(page - 1) * PER_PAGE
+        )
+
+    return render(
+        request,
+        "videos/videos.html",
+        {
+            "query": q,
+            "results": results,
+            "videos": videos,
+            "page": page,
+            "total_pages": total_pages,
+        },
+    )
 
 # Put specific routes FIRST
 @pages.get("/videos/categories", response_class=HTMLResponse)

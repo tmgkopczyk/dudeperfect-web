@@ -19,7 +19,8 @@ def get_battle_view(video_id: int):
                     v.id AS video_id,
                     v.title
                 FROM battles b
-                JOIN videos v ON v.id = b.video_id
+                JOIN videos v
+                    ON v.id = b.video_id
                 WHERE v.id = :video_id
                 LIMIT 1
             """),
@@ -37,10 +38,11 @@ def get_battle_view(video_id: int):
             text("""
                 SELECT
                     id,
-                    name
+                    name,
+                    accent_color
                 FROM battle_teams
                 WHERE battle_id = :battle_id
-                ORDER BY id
+                ORDER BY id;
             """),
             {"battle_id": battle_row["battle_id"]}
         ).mappings().all()
@@ -54,8 +56,9 @@ def get_battle_view(video_id: int):
                 members = conn.execute(
                     text("""
                         SELECT
+                            p.id AS player_id,
                             p.name,
-                            NOT p.is_core_member AS is_guest,
+                            bp.is_guest,
                             bp.notes
                         FROM battle_team_members btm
                         JOIN battle_players bp
@@ -63,25 +66,28 @@ def get_battle_view(video_id: int):
                         JOIN players p
                             ON p.id = bp.player_id
                         WHERE btm.team_id = :team_id
-                        ORDER BY
-                            p.is_core_member DESC,
-                            p.name
+                        ORDER BY p.name
                     """),
                     {"team_id": team["id"]}
                 ).mappings().all()
 
                 teams.append({
                     "name": team["name"],
+                    "accent_color": team["accent_color"],
                     "players": [dict(x) for x in members]
                 })
 
+        # -------------------------
+        # Individual battle
+        # -------------------------
         else:
-            # Individual battle
+
             players = conn.execute(
                 text("""
                     SELECT
+                        p.id AS player_id,
                         p.name,
-                        NOT p.is_core_member AS is_guest,
+                        bp.is_guest,
                         bp.notes
                     FROM battle_players bp
                     JOIN players p
@@ -94,11 +100,10 @@ def get_battle_view(video_id: int):
                 {"battle_id": battle_row["battle_id"]}
             ).mappings().all()
 
-            teams.append({
+            teams = [{
                 "name": "Players",
                 "players": [dict(x) for x in players]
-            })
-
+            }]
         # =========================
         # 3️⃣ Rounds
         # =========================
@@ -132,9 +137,9 @@ def get_battle_view(video_id: int):
                     LEFT JOIN battle_players bp
                         ON brp.battle_player_id = bp.id
                     LEFT JOIN players p
-                        ON bp.player_id = p.id
+                        ON p.id = bp.player_id
                     LEFT JOIN battle_teams bt
-                        ON brp.battle_team_id = bt.id
+                        ON bt.id = brp.battle_team_id
                     WHERE brp.battle_round_id = :round_id
                     ORDER BY
                         brp.placement NULLS LAST,
@@ -148,7 +153,36 @@ def get_battle_view(video_id: int):
                 "score_label": r["score_label"],
                 "results": [dict(x) for x in results]
             })
+        # =========================
+        # 4️⃣ Final standings
+        # =========================
+        final_standings = []
 
+        if rounds:
+            final_round_id = rounds[-1]["id"]
+
+            final_standings = conn.execute(
+                text("""
+                    SELECT
+                        COALESCE(p.name, bt.name) AS name,
+                        brp.status,
+                        brp.placement,
+                        brp.score,
+                        brp.notes
+                    FROM battle_round_participants brp
+                    LEFT JOIN battle_players bp
+                        ON brp.battle_player_id = bp.id
+                    LEFT JOIN players p
+                        ON p.id = bp.player_id
+                    LEFT JOIN battle_teams bt
+                        ON bt.id = brp.battle_team_id
+                    WHERE brp.battle_round_id = :round_id
+                    ORDER BY
+                        brp.placement NULLS LAST,
+                        COALESCE(p.name, bt.name)
+                """),
+                {"round_id": final_round_id}
+            ).mappings().all()
     # =========================
     # 4️⃣ Shape data for template
     # =========================
@@ -163,7 +197,7 @@ def get_battle_view(video_id: int):
         "notes": battle_row["notes"],
         "teams": teams,
         "timeline": timeline,
-        "final_standings": []
+        "final_standings": [dict(x) for x in final_standings]
     }
 
 def get_overtime_view(video_id: int):
@@ -1068,6 +1102,51 @@ def search_songs(query: str, limit: int = 50):
     for row in rows
     ]
 
+def get_all_artists():
+    sql = text("""
+        SELECT
+            a.id,
+            a.name,
+            COUNT(DISTINCT sa.song_id) AS song_count
+        FROM artists a
+        LEFT JOIN song_artists sa
+            ON sa.artist_id = a.id
+        GROUP BY a.id, a.name
+        ORDER BY a.name
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql).mappings().all()
+
+    return [dict(row) for row in rows]
+
+def get_all_songs():
+    sql = text("""
+        SELECT
+            s.id,
+            s.title,
+            s.spotify_track_id,
+            array_agg(a.name ORDER BY sa.artist_order) AS artists
+        FROM songs s
+        JOIN song_artists sa ON sa.song_id = s.id
+        JOIN artists a ON a.id = sa.artist_id
+        GROUP BY s.id
+        ORDER BY s.title
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql).mappings().all()
+
+    return [
+        {
+            "id": row["id"],
+            "title": row["title"],
+            "spotify_track_id": row["spotify_track_id"],
+            "artists": row["artists"],
+        }
+        for row in rows
+    ]
+
 def get_song_by_track_id(track_id: str):
     sql = text("""
         SELECT
@@ -1344,6 +1423,71 @@ def get_video_category_by_slug(slug: str):
     with engine.connect() as conn:
         return conn.execute(sql, {"slug": slug}).mappings().first()
 
+def search_videos(query: str, limit: int = 50):
+    sql = text("""
+        SELECT
+            v.id,
+            v.title,
+            v.published_at,
+            COUNT(vs.song_id) AS song_count
+        FROM videos v
+        LEFT JOIN video_songs vs
+            ON vs.video_id = v.id
+        WHERE unaccent(lower(v.title))
+              LIKE unaccent(lower(:q))
+        GROUP BY v.id
+        ORDER BY v.published_at DESC
+        LIMIT :limit
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sql,
+            {
+                "q": f"%{query}%",
+                "limit": limit
+            }
+        ).mappings().all()
+
+    return [dict(row) for row in rows]
+
+def get_videos(limit: int = 50, offset: int = 0):
+    sql = text("""
+        SELECT
+            v.id,
+            v.title,
+            v.published_at,
+            COUNT(vs.song_id) AS song_count
+        FROM videos v
+        LEFT JOIN video_songs vs
+            ON vs.video_id = v.id
+        GROUP BY v.id
+        ORDER BY v.published_at DESC
+        LIMIT :limit
+        OFFSET :offset
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sql,
+            {
+                "limit": limit,
+                "offset": offset
+            }
+        ).mappings().all()
+
+    return [dict(row) for row in rows]
+
+
+def get_video_count():
+    sql = text("""
+        SELECT COUNT(*)
+        FROM videos
+    """)
+
+    with engine.connect() as conn:
+        return conn.execute(sql).scalar_one()
+
 def list_videos_for_category(category_id: int, q: str | None = None):
     sql = text("""
         SELECT
@@ -1392,28 +1536,66 @@ def get_player_by_slug(slug: str):
             (
                 SELECT COUNT(DISTINCT bp.battle_id)
                 FROM battle_players bp
-                WHERE bp.name = p.name
+                WHERE bp.player_id = p.id
             ) AS total_battles,
 
             (
-                SELECT COUNT(*)
+                SELECT COUNT(DISTINCT b.id)
                 FROM battles b
-                WHERE b.winner ILIKE '%' || p.name || '%'
+
+                LEFT JOIN battle_teams bt
+                    ON bt.battle_id = b.id
+                   AND b.winner ILIKE '%' || bt.name || '%'
+
+                LEFT JOIN battle_team_members btm
+                    ON btm.team_id = bt.id
+
+                LEFT JOIN battle_players bp
+                    ON bp.id = btm.battle_player_id
+
+                WHERE
+                    (
+                        bp.player_id = p.id
+                    )
+                    OR
+                    (
+                        bt.id IS NULL
+                        AND b.winner ILIKE '%' || p.name || '%'
+                    )
             ) AS total_wins,
 
             ROUND(
                 (
                     (
-                        SELECT COUNT(*)
+                        SELECT COUNT(DISTINCT b.id)
                         FROM battles b
-                        WHERE b.winner ILIKE '%' || p.name || '%'
+
+                        LEFT JOIN battle_teams bt
+                            ON bt.battle_id = b.id
+                           AND b.winner ILIKE '%' || bt.name || '%'
+
+                        LEFT JOIN battle_team_members btm
+                            ON btm.team_id = bt.id
+
+                        LEFT JOIN battle_players bp
+                            ON bp.id = btm.battle_player_id
+
+                        WHERE
+                            (
+                                bp.player_id = p.id
+                            )
+                            OR
+                            (
+                                bt.id IS NULL
+                                AND b.winner ILIKE '%' || p.name || '%'
+                            )
                     ) * 100.0
                 ) /
                 NULLIF(
                     (
                         SELECT COUNT(DISTINCT bp.battle_id)
                         FROM battle_players bp
-                        WHERE bp.name = p.name
+                        WHERE bp.player_id = p.id
                     ),
                     0
                 ),

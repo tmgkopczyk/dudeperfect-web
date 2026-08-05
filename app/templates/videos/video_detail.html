@@ -133,7 +133,7 @@
   <div id="tab-content-battle" class="tab-content hidden space-y-6">
   {% if battle %}
 
-    <section class="space-y-4">
+    <section class="space-y-3">
       <h3 class="text-lg font-medium text-neutral-900">
         {% if battle.teams|length == 1 %}
           Players
@@ -142,31 +142,43 @@
         {% endif %}
       </h3>
 
-      {% for team in battle.teams %}
+      {% if battle.teams|length == 1 %}
 
-        <div class="space-y-3">
+        <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+          {% for player in battle.teams[0].players %}
+            <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
+              {{ player.name }}
+              {% if player.is_guest %}
+                <span title="Guest">⭐</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
 
-          {% if battle.teams|length > 1 %}
-            <h4 class="font-semibold text-neutral-700 border-b pb-1">
-              {{ team.name }}
-            </h4>
-          {% endif %}
+      {% else %}
 
-          <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-            {% for player in team.players %}
-              <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
-                {% if player.is_guest %}
-                  <span title="Guest">⭐</span>
-                {% endif %}
-                {{ player.name }}
-              </li>
-            {% endfor %}
-          </ul>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {% for team in battle.teams %}
+            <div class="border rounded-lg bg-white p-4 space-y-3 border-t-4" style="border-top: 6px solid {{ team.accent_color }};">
+              <h4 class="font-semibold text-neutral-800">
+                {{ team.name }}
+              </h4>
 
+              <ul class="space-y-2 text-sm">
+                {% for player in team.players %}
+                  <li class="flex items-center gap-2">
+                    {{ player.name }}
+                    {% if player.is_guest %}
+                      <span title="Guest">⭐</span>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endfor %}
         </div>
 
-      {% endfor %}
-
+      {% endif %}
     </section>
 
     {% if battle.timeline %}
@@ -179,21 +191,32 @@
 
         <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
           {% for p in round.results %}
-            <li class="flex justify-between border rounded px-2 py-1 bg-white">
-              <span class="font-medium">{{ p.name }}</span>
+            <li class="border rounded px-3 py-2 bg-white">
+              <div class="flex justify-between items-center">
+                <span class="font-medium">
+                  {{ p.name }}
+                </span>
 
-              <span class="text-neutral-600 text-right">
-                {% if p.score is not none %}
-                  {% if p.score == p.score|int %}
-                    {{ p.score|int }}
-                  {% else %}
-                    {{ "%.1f"|format(p.score) }}
+                <span class="text-neutral-700 text-right">
+                  {% if p.score is not none %}
+                    {% if p.score == p.score|int %}
+                      {{ p.score|int }}
+                    {% else %}
+                      {{ "%.1f"|format(p.score) }}
+                    {% endif %}
+                    {% if round.score_label %}
+                      {{ round.score_label }}
+                    {% endif %}
                   {% endif %}
-                  {% if round.score_label %}
-                    {{ round.score_label }}
-                  {% endif %}
-                {% endif %}
-              </span>
+                </span>
+              </div>
+
+              {% if p.status %}
+                <div class="mt-1 text-xs text-neutral-500 italic">
+                  {{ p.status|replace('_', ' ')|title }}
+                </div>
+              {% endif %}
+
             </li>
           {% endfor %}
         </ul>
