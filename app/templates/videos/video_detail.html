@@ -32,6 +32,7 @@
       <a
         href="https://www.youtube.com/watch?v={{ video.youtube_video_id }}"
         target="_blank"
+        rel="noopener noreferrer"
         class="text-sm text-[#2EFCE6] hover:underline"
       >
         Watch on YouTube →
@@ -42,25 +43,20 @@
   <!-- Thumbnail -->
   {% if video.youtube_video_id %}
   <div class="mt-4 max-w-4xl mx-auto">
-    <a href="https://www.youtube.com/watch?v={{ video.youtube_video_id }}"
-       target="_blank"
-       class="relative block rounded-xl overflow-hidden group">
+    <div class="relative w-full overflow-hidden rounded-xl shadow-lg"
+        style="padding-bottom:56.25%;">
 
-      <img
-        src="https://img.youtube.com/vi/{{ video.youtube_video_id }}/maxresdefault.jpg"
-        alt="{{ video.title }}"
-        class="w-full h-auto block"
+      <iframe
+        class="absolute inset-0 w-full h-full"
+        src="https://www.youtube-nocookie.com/embed/{{ video.youtube_video_id }}"
+        title="{{ video.title }}"
         loading="lazy"
-      >
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen>
+      </iframe>
 
-      <div class="absolute inset-0 flex items-center justify-center
-                  bg-black/0 group-hover:bg-black/20
-                  transition duration-200">
-        <div class="bg-white/90 rounded-full p-4 text-xl group-hover:scale-110 transition">
-          ▶
-        </div>
-      </div>
-    </a>
+    </div>
   </div>
   {% endif %}
 
@@ -131,102 +127,9 @@
 
   <!-- Battle -->
   <div id="tab-content-battle" class="tab-content hidden space-y-6">
-  {% if battle %}
-
-    <section class="space-y-3">
-      <h3 class="text-lg font-medium text-neutral-900">
-        {% if battle.teams|length == 1 %}
-          Players
-        {% else %}
-          Teams
-        {% endif %}
-      </h3>
-
-      {% if battle.teams|length == 1 %}
-
-        <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-          {% for player in battle.teams[0].players %}
-            <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
-              {{ player.name }}
-              {% if player.is_guest %}
-                <span title="Guest">⭐</span>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-
-      {% else %}
-
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {% for team in battle.teams %}
-            <div class="border rounded-lg bg-white p-4 space-y-3 border-t-4" style="border-top: 6px solid {{ team.accent_color }};">
-              <h4 class="font-semibold text-neutral-800">
-                {{ team.name }}
-              </h4>
-
-              <ul class="space-y-2 text-sm">
-                {% for player in team.players %}
-                  <li class="flex items-center gap-2">
-                    {{ player.name }}
-                    {% if player.is_guest %}
-                      <span title="Guest">⭐</span>
-                    {% endif %}
-                  </li>
-                {% endfor %}
-              </ul>
-            </div>
-          {% endfor %}
-        </div>
-
-      {% endif %}
-    </section>
-
-    {% if battle.timeline %}
-    <section class="space-y-4">
-      <h3 class="text-lg font-medium text-neutral-900">Battle Rounds</h3>
-
-      {% for round in battle.timeline %}
-      <div class="border rounded-lg p-4 space-y-3 bg-white">
-        <div class="font-semibold text-neutral-800">{{ round.name }}</div>
-
-        <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-          {% for p in round.results %}
-            <li class="border rounded px-3 py-2 bg-white">
-              <div class="flex justify-between items-center">
-                <span class="font-medium">
-                  {{ p.name }}
-                </span>
-
-                <span class="text-neutral-700 text-right">
-                  {% if p.score is not none %}
-                    {% if p.score == p.score|int %}
-                      {{ p.score|int }}
-                    {% else %}
-                      {{ "%.1f"|format(p.score) }}
-                    {% endif %}
-                    {% if round.score_label %}
-                      {{ round.score_label }}
-                    {% endif %}
-                  {% endif %}
-                </span>
-              </div>
-
-              {% if p.status %}
-                <div class="mt-1 text-xs text-neutral-500 italic">
-                  {{ p.status|replace('_', ' ')|title }}
-                </div>
-              {% endif %}
-
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endfor %}
-    </section>
-    {% endif %}
-
-  {% endif %}
+    {% include "videos/sections/_battle.html" %}
   </div>
+    
 
   <!-- Overtime -->
   <div id="tab-content-overtime" class="tab-content hidden space-y-6">

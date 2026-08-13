@@ -19,3 +19,4 @@ Thumbs.db
 
 # n8n / temp
 *.zip
+*.sql

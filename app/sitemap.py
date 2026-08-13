@@ -5,7 +5,7 @@ from .queries import list_video_categories
 
 router = APIRouter(include_in_schema=False)
 
-BASE_URL = "https://dudeperfectfanarchive.com"  # <-- change this
+BASE_URL = "https://dudeperfectfanarchive.com"
 
 
 @router.get("/sitemap.xml")
@@ -19,6 +19,8 @@ def sitemap():
         f"{BASE_URL}/songs",
         f"{BASE_URL}/artists",
         f"{BASE_URL}/videos/categories",
+        f"{BASE_URL}/players",
+        f"{BASE_URL}/contact",
     ])
 
     # --- Category pages (DB-backed slugs) ---
@@ -38,6 +40,14 @@ def sitemap():
         # --- Artists ---
         for row in conn.execute(text("SELECT id FROM artists")):
             urls.append(f"{BASE_URL}/artists/{row.id}")
+    
+        # --- Players ---
+        for row in conn.execute(text("""
+            SELECT slug
+            FROM players
+            WHERE slug IS NOT NULL
+        """)):
+            urls.append(f"{BASE_URL}/player/{row.slug}")
 
     return Response(
         content=render_sitemap(urls),

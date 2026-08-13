@@ -198,14 +198,6 @@ async def admin_login(
     password: str = Form(...)
 ):
 
-    print("Submitted username:", repr(username))
-    print("Expected username:", repr(os.getenv("ADMIN_USERNAME")))
-    print("Username match:", username == os.getenv("ADMIN_USERNAME"))
-
-    print("Submitted password:", repr(password))
-    print("Expected password:", repr(os.getenv("ADMIN_PASSWORD")))
-    print("Password match:", password == os.getenv("ADMIN_PASSWORD"))
-
     if (
         username == os.getenv("ADMIN_USERNAME")
         and password == os.getenv("ADMIN_PASSWORD")
@@ -230,7 +222,7 @@ async def admin_login(
 # Songs
 # =========================
 
-#new
+
 @pages.get("/songs", response_class=HTMLResponse)
 def songs_page(request: Request, q: Optional[str] = None):
     if q:
@@ -239,9 +231,6 @@ def songs_page(request: Request, q: Optional[str] = None):
     else:
         results = None
         songs = queries.get_all_songs()
-
-    #print(f"query={q!r}")
-    #print(f"songs={len(songs) if songs else 0}")
 
     available_letters = sorted({
         song["title"][0].upper()
@@ -259,13 +248,6 @@ def songs_page(request: Request, q: Optional[str] = None):
             "query": q,
         },
     )
-#Original
-
-#@pages.get("/songs", response_class=HTMLResponse)
-#def songs_page(request: Request, q: Optional[str] = None):
-#    results = queries.search_songs(q) if q else None
-#    return render(request, "songs/songs.html", {"results": results, "query": q})
-
 
 @pages.get("/songs/{song_id}", response_class=HTMLResponse)
 def song_detail(request: Request, song_id: int):
@@ -379,13 +361,24 @@ def videos_page(
         },
     )
 
+@pages.get("/videos/youtube/{youtube_video_id}")
+def video_by_youtube_id(youtube_video_id: str):
+    video_id = queries.get_video_id_by_youtube_id(youtube_video_id)
+
+    if video_id is None:
+        raise HTTPException(404)
+
+    return RedirectResponse(
+        url=f"/videos/{video_id}",
+        status_code=302
+    )
+
 # Put specific routes FIRST
 @pages.get("/videos/categories", response_class=HTMLResponse)
 def categories_page(request: Request):
     return render(request, "videos/categories/index.html", {
         "categories": queries.list_video_categories()
     })
-
 
 @pages.get("/videos/categories/{slug}", response_class=HTMLResponse)
 def category_detail(request: Request, slug: str, q: Optional[str] = None):
@@ -419,14 +412,6 @@ def video_detail(request: Request, video_id: int):
 # =========================
 # Categories
 # =========================
-
-@pages.get("/videos/categories", response_class=HTMLResponse)
-def categories_page(request: Request):
-    return render(request, "videos/categories/index.html", {
-        "categories": queries.list_video_categories()
-    })
-
-
 @pages.get("/videos/categories/{slug}", response_class=HTMLResponse)
 def category_detail(request: Request, slug: str, q: Optional[str] = None):
     category = queries.get_video_category_by_slug(slug)
