@@ -1189,7 +1189,7 @@ def get_all_artists():
             a.name,
 
             CASE
-                WHEN LEFT(a.name, 1) ~* '[A-Z]'
+                WHEN LEFT(a.name, 1) ~* '^[A-Z]$'
                     THEN UPPER(LEFT(a.name, 1))
                 ELSE '#'
             END AS letter_group,
@@ -1205,11 +1205,10 @@ def get_all_artists():
 
         ORDER BY
             CASE
-                WHEN LEFT(a.name, 1) ~* '[A-Z]'
-                    THEN ASCII(UPPER(LEFT(a.name, 1)))
+                WHEN LEFT(a.name, 1) ~* '^[A-Z]$' THEN 1
                 ELSE 0
             END,
-            a.name
+            UPPER(a.name)
     """)
 
     with engine.connect() as conn:
