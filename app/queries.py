@@ -162,7 +162,7 @@ def get_battle_view(video_id: int):
 
             matches = []
 
-            if r["round_type"] in ("round_robin", "tournament"):
+            if r["round_type"] in ("round_robin", "elimination", "tournament"):
 
                 match_rows = conn.execute(
                     text("""
@@ -1206,12 +1206,35 @@ def get_all_songs():
             s.id,
             s.title,
             s.spotify_track_id,
-            array_agg(a.name ORDER BY sa.artist_order) AS artists
+
+            CASE
+                WHEN LEFT(s.title, 1) ~* '[A-Z]'
+                    THEN UPPER(LEFT(s.title, 1))
+                ELSE '#'
+            END AS letter_group,
+
+            array_agg(
+                a.name
+                ORDER BY sa.artist_order
+            ) AS artists
+
         FROM songs s
-        JOIN song_artists sa ON sa.song_id = s.id
-        JOIN artists a ON a.id = sa.artist_id
+
+        JOIN song_artists sa
+            ON sa.song_id = s.id
+
+        JOIN artists a
+            ON a.id = sa.artist_id
+
         GROUP BY s.id
-        ORDER BY s.title
+
+        ORDER BY
+            CASE
+                WHEN LEFT(s.title, 1) ~* '[A-Z]'
+                    THEN ASCII(UPPER(LEFT(s.title, 1)))
+                ELSE 0
+            END,
+            s.title
     """)
 
     with engine.connect() as conn:
@@ -1222,7 +1245,57 @@ def get_all_songs():
             "id": row["id"],
             "title": row["title"],
             "spotify_track_id": row["spotify_track_id"],
+            "letter_group": row["letter_group"],
             "artists": row["artists"],
+        }
+        for row in rows
+    ]
+
+def get_song_letters():
+    sql = text("""
+        WITH available_groups AS (
+            SELECT DISTINCT
+                CASE
+                    WHEN LEFT(title, 1) ~* '[A-Z]'
+                        THEN UPPER(LEFT(title, 1))
+                    ELSE '#'
+                END AS letter
+            FROM songs
+            WHERE title IS NOT NULL
+              AND title <> ''
+        ),
+        letters AS (
+            SELECT
+                '#' AS letter,
+                'number' AS anchor,
+                0 AS sort_order
+
+            UNION ALL
+
+            SELECT
+                chr(n) AS letter,
+                chr(n) AS anchor,
+                n - 64 AS sort_order
+            FROM generate_series(65, 90) AS n
+        )
+        SELECT
+            l.letter,
+            l.anchor,
+            (ag.letter IS NOT NULL) AS available
+        FROM letters l
+        LEFT JOIN available_groups ag
+            ON ag.letter = l.letter
+        ORDER BY l.sort_order
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql).mappings().all()
+
+    return [
+        {
+            "letter": row["letter"],
+            "anchor": row["anchor"],
+            "available": row["available"],
         }
         for row in rows
     ]

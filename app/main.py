@@ -228,15 +228,11 @@ def songs_page(request: Request, q: Optional[str] = None):
     if q:
         results = queries.search_songs(q)
         songs = None
+        letters = None
     else:
         results = None
         songs = queries.get_all_songs()
-
-    available_letters = sorted({
-        song["title"][0].upper()
-        for song in songs or []
-        if song["title"]
-    })
+        letters = queries.get_song_letters()
 
     return render(
         request,
@@ -244,7 +240,7 @@ def songs_page(request: Request, q: Optional[str] = None):
         {
             "results": results,
             "songs": songs,
-            "available_letters": available_letters,
+            "letters": letters,
             "query": q,
         },
     )
@@ -256,6 +252,47 @@ def song_detail(request: Request, song_id: int):
         raise HTTPException(404)
     return render(request, "songs/song_detail.html", {"song": song})
 
+def get_song_letters():
+    sql = text("""
+        WITH available_groups AS (
+            SELECT DISTINCT
+                CASE
+                    WHEN LEFT(title, 1) ~ '[0-9]' THEN '#'
+                    WHEN LEFT(title, 1) ~* '[A-Z]' THEN UPPER(LEFT(title, 1))
+                    ELSE '#'
+                END AS letter
+            FROM songs
+            WHERE title IS NOT NULL
+              AND title <> ''
+        ),
+        letters AS (
+            SELECT
+                '#' AS letter,
+                'number' AS anchor,
+                0 AS sort_order
+
+            UNION ALL
+
+            SELECT
+                chr(n) AS letter,
+                chr(n) AS anchor,
+                n - 64 AS sort_order
+            FROM generate_series(65, 90) AS n
+        )
+        SELECT
+            l.letter,
+            l.anchor,
+            (ag.letter IS NOT NULL) AS available
+        FROM letters l
+        LEFT JOIN available_groups ag
+            ON ag.letter = l.letter
+        ORDER BY l.sort_order
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql).mappings().all()
+
+    return [dict(row) for row in rows]
 
 # =========================
 # Artists

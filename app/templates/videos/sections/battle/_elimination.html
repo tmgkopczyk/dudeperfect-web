@@ -1,0 +1,82 @@
+<div class="space-y-3">
+
+  {% for match in round.matches %}
+
+    <div class="border rounded-lg bg-neutral-50 px-4 py-3">
+
+      <!-- Optional match title -->
+      {% if match.title %}
+        <div class="font-semibold text-center mb-3">
+          {{ match.title }}
+        </div>
+      {% endif %}
+
+      <!-- Match -->
+      <div class="flex items-center justify-center gap-6 text-sm">
+
+        {% for participant in match.participants %}
+
+          {% if not loop.first %}
+            <span class="font-semibold text-neutral-400">
+              VS
+            </span>
+          {% endif %}
+
+          <div class="min-w-28 text-center">
+
+            <!-- Player / Team name -->
+            <div
+              {% if participant.status == "advanced" %}
+                class="font-semibold text-neutral-900"
+              {% elif participant.status == "disqualified" %}
+                class="text-neutral-400 line-through"
+              {% else %}
+                class="text-neutral-600"
+              {% endif %}
+            >
+
+              {% if participant.status == "advanced" %}
+                🏆
+              {% endif %}
+
+              {{ participant.name }}
+
+            </div>
+
+            <!-- Status -->
+            {% if participant.status %}
+
+              <div
+                class="
+                  mt-1 text-xs font-medium
+
+                  {% if participant.status == 'advanced' %}
+                    text-green-600
+
+                  {% elif participant.status == 'disqualified' %}
+                    text-red-500
+
+                  {% elif participant.status == 'eliminated' %}
+                    text-neutral-400
+
+                  {% else %}
+                    text-neutral-500
+                  {% endif %}
+                "
+              >
+                {{ participant.status|replace('_', ' ')|title }}
+              </div>
+
+            {% endif %}
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    </div>
+
+  {% endfor %}
+
+</div>
