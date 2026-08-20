@@ -1187,12 +1187,71 @@ def get_all_artists():
         SELECT
             a.id,
             a.name,
+
+            CASE
+                WHEN LEFT(a.name, 1) ~* '[A-Z]'
+                    THEN UPPER(LEFT(a.name, 1))
+                ELSE '#'
+            END AS letter_group,
+
             COUNT(DISTINCT sa.song_id) AS song_count
+
         FROM artists a
+
         LEFT JOIN song_artists sa
             ON sa.artist_id = a.id
+
         GROUP BY a.id, a.name
-        ORDER BY a.name
+
+        ORDER BY
+            CASE
+                WHEN LEFT(a.name, 1) ~* '[A-Z]'
+                    THEN ASCII(UPPER(LEFT(a.name, 1)))
+                ELSE 0
+            END,
+            a.name
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql).mappings().all()
+
+    return [dict(row) for row in rows]
+
+def get_artist_letters():
+    sql = text("""
+        WITH available_groups AS (
+            SELECT DISTINCT
+                CASE
+                    WHEN LEFT(name, 1) ~* '[A-Z]'
+                        THEN UPPER(LEFT(name, 1))
+                    ELSE '#'
+                END AS letter
+            FROM artists
+            WHERE name IS NOT NULL
+              AND name <> ''
+        ),
+        letters AS (
+            SELECT
+                '#' AS letter,
+                'number' AS anchor,
+                0 AS sort_order
+
+            UNION ALL
+
+            SELECT
+                chr(n) AS letter,
+                chr(n) AS anchor,
+                n - 64 AS sort_order
+            FROM generate_series(65, 90) AS n
+        )
+        SELECT
+            l.letter,
+            l.anchor,
+            (ag.letter IS NOT NULL) AS available
+        FROM letters l
+        LEFT JOIN available_groups ag
+            ON ag.letter = l.letter
+        ORDER BY l.sort_order
     """)
 
     with engine.connect() as conn:

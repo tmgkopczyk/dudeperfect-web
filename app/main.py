@@ -252,47 +252,6 @@ def song_detail(request: Request, song_id: int):
         raise HTTPException(404)
     return render(request, "songs/song_detail.html", {"song": song})
 
-def get_song_letters():
-    sql = text("""
-        WITH available_groups AS (
-            SELECT DISTINCT
-                CASE
-                    WHEN LEFT(title, 1) ~ '[0-9]' THEN '#'
-                    WHEN LEFT(title, 1) ~* '[A-Z]' THEN UPPER(LEFT(title, 1))
-                    ELSE '#'
-                END AS letter
-            FROM songs
-            WHERE title IS NOT NULL
-              AND title <> ''
-        ),
-        letters AS (
-            SELECT
-                '#' AS letter,
-                'number' AS anchor,
-                0 AS sort_order
-
-            UNION ALL
-
-            SELECT
-                chr(n) AS letter,
-                chr(n) AS anchor,
-                n - 64 AS sort_order
-            FROM generate_series(65, 90) AS n
-        )
-        SELECT
-            l.letter,
-            l.anchor,
-            (ag.letter IS NOT NULL) AS available
-        FROM letters l
-        LEFT JOIN available_groups ag
-            ON ag.letter = l.letter
-        ORDER BY l.sort_order
-    """)
-
-    with engine.connect() as conn:
-        rows = conn.execute(sql).mappings().all()
-
-    return [dict(row) for row in rows]
 
 # =========================
 # Artists
@@ -303,15 +262,11 @@ def artists_page(request: Request, q: Optional[str] = None):
     if q:
         results = queries.search_artists(q)
         artists = None
+        letters = None
     else:
         results = None
         artists = queries.get_all_artists()
-
-    available_letters = sorted({
-        artist["name"][0].upper()
-        for artist in artists or []
-        if artist["name"]
-    })
+        letters = queries.get_artist_letters()
 
     return render(
         request,
@@ -319,11 +274,10 @@ def artists_page(request: Request, q: Optional[str] = None):
         {
             "results": results,
             "artists": artists,
-            "available_letters": available_letters,
+            "letters": letters,
             "query": q,
         },
     )
-
 
 @pages.get("/artists/{artist_id}", response_class=HTMLResponse)
 def artist_detail(request: Request, artist_id: int):
