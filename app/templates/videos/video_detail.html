@@ -185,24 +185,35 @@
 
               <!-- Main performer -->
               {% if segment.main_performer %}
-                <div class="mt-1 text-sm text-neutral-600">
-                  Played by: {{ segment.main_performer }}
+                <div class="text-sm text-neutral-600">
+                  Played by
+
+                  <a href="/stereotypes/performers/{{ segment.main_performer_id }}" class="font-medium hover:text-[#2EFCE6]">
+                    {{ segment.main_performer }}
+                  </a>
                 </div>
               {% endif %}
 
               <!-- Other performers -->
               {% if segment.other_performers %}
-                <div class="mt-1 text-sm text-neutral-600">
-                  {% if segment.main_performer %}Also featuring{% else %}Featuring{% endif %}:
-                  {{ segment.other_performers | map(attribute='name') | join(', ') }}
+                <div class="text-sm text-neutral-600">
+                  {% if segment.main_performer %}
+                    Also featuring
+                  {% else %}
+                    Featuring
+                  {% endif %}
+
+                  {% for performer in segment.other_performers -%}
+                    <a href="/stereotypes/performers/{{ performer.id }}" class="font-medium hover:text-[#2EFCE6]">{{ performer.name }}</a>{% if not loop.last %}, {% endif %}
+                  {%- endfor %}
                 </div>
               {% endif %}
 
               <!-- Recurring stereotype -->
               {% if segment.recurring_name %}
-                <div class="mt-1 text-xs font-medium text-[#2EFCE6]">
+                <a href="/stereotypes/recurring/{{ segment.recurring_id }}" class="mt-1 block text-xs font-medium text-[#2EFCE6] hover:underline">
                   ↻ Recurring stereotype: {{ segment.recurring_name }}
-                </div>
+                </a>
               {% endif %}
 
               <!-- Notes -->

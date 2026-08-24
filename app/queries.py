@@ -1048,6 +1048,290 @@ def get_stereotypes_episodes():
 
         return [dict(row) for row in rows]
 
+def get_recurring_stereotype(recurring_id: int):
+    with engine.connect() as conn:
+
+        recurring = conn.execute(
+            text("""
+                SELECT
+                    id,
+                    name
+                FROM recurring_stereotypes
+                WHERE id = :recurring_id
+                LIMIT 1
+            """),
+            {"recurring_id": recurring_id}
+        ).mappings().first()
+
+        if not recurring:
+            return None
+
+        rows = conn.execute(
+            text("""
+                SELECT
+                    ss.id AS segment_id,
+                    ss.segment_order,
+                    ss.name AS segment_name,
+                    ss.timestamp_seconds,
+                    ss.notes,
+
+                    se.id AS episode_id,
+                    se.episode_number,
+                    se.theme,
+
+                    v.id AS video_id,
+                    v.title AS video_title,
+                    v.youtube_video_id,
+                    v.published_at,
+
+                    p.id AS main_performer_id,
+                    p.name AS main_performer
+
+                FROM stereotype_segments ss
+
+                JOIN stereotypes_episodes se
+                    ON se.id = ss.episode_id
+
+                JOIN videos v
+                    ON v.id = se.video_id
+
+                LEFT JOIN players p
+                    ON p.id = ss.performer_id
+
+                WHERE ss.recurring_id = :recurring_id
+
+                ORDER BY
+                    se.episode_number,
+                    ss.segment_order
+            """),
+            {"recurring_id": recurring_id}
+        ).mappings().all()
+
+        appearances = []
+
+        for row in rows:
+            other_performers = conn.execute(
+                text("""
+                    SELECT
+                        p.id,
+                        p.name
+                    FROM stereotype_segment_performers ssp
+                    JOIN players p
+                        ON p.id = ssp.player_id
+                    WHERE ssp.segment_id = :segment_id
+                    ORDER BY p.name
+                """),
+                {"segment_id": row["segment_id"]}
+            ).mappings().all()
+
+            appearance = dict(row)
+
+            appearance["other_performers"] = [
+                {
+                    "id": performer["id"],
+                    "name": performer["name"]
+                }
+                for performer in other_performers
+            ]
+
+            appearances.append(appearance)
+
+        return {
+            "id": recurring["id"],
+            "name": recurring["name"],
+            "appearance_count": len(appearances),
+            "appearances": appearances
+        }
+
+def get_stereotype_performers():
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("""
+                WITH performer_appearances AS (
+
+                    -- Main performers
+                    SELECT
+                        ss.id AS segment_id,
+                        ss.episode_id,
+                        ss.performer_id AS player_id
+                    FROM stereotype_segments ss
+                    WHERE ss.performer_id IS NOT NULL
+
+                    UNION
+
+                    -- Secondary performers
+                    SELECT
+                        ss.id AS segment_id,
+                        ss.episode_id,
+                        ssp.player_id
+                    FROM stereotype_segment_performers ssp
+                    JOIN stereotype_segments ss
+                        ON ss.id = ssp.segment_id
+                )
+
+                SELECT
+                    p.id,
+                    p.name,
+                    p.slug,
+                    COUNT(DISTINCT pa.segment_id) AS stereotype_count,
+                    COUNT(DISTINCT pa.episode_id) AS episode_count
+                FROM performer_appearances pa
+
+                JOIN players p
+                    ON p.id = pa.player_id
+
+                GROUP BY
+                    p.id,
+                    p.name,
+                    p.slug
+
+                ORDER BY
+                    COUNT(DISTINCT pa.segment_id) DESC,
+                    p.name
+            """)
+        ).mappings().all()
+
+        return [dict(row) for row in rows]
+
+def get_stereotype_performer_view(player_id: int):
+    with engine.connect() as conn:
+
+        performer = conn.execute(
+            text("""
+                SELECT
+                    p.id,
+                    p.name,
+                    p.slug
+                FROM players p
+                WHERE p.id = :player_id
+            """),
+            {"player_id": player_id}
+        ).mappings().first()
+
+        if not performer:
+            return None
+
+        appearances = conn.execute(
+            text("""
+                WITH performer_appearances AS (
+
+                    -- Main performer
+                    SELECT
+                        ss.id AS segment_id,
+                        TRUE AS is_main_performer
+                    FROM stereotype_segments ss
+                    WHERE ss.performer_id = :player_id
+
+                    UNION
+
+                    -- Secondary performer
+                    SELECT
+                        ssp.segment_id,
+                        FALSE AS is_main_performer
+                    FROM stereotype_segment_performers ssp
+                    WHERE ssp.player_id = :player_id
+                )
+
+                SELECT
+                    ss.id AS segment_id,
+                    ss.segment_order,
+                    ss.name AS segment_name,
+                    ss.notes,
+                    ss.timestamp_seconds,
+
+                    pa.is_main_performer,
+
+                    se.id AS episode_id,
+                    se.episode_number,
+                    se.theme,
+                    se.video_id,
+
+                    v.title AS video_title,
+                    v.youtube_video_id,
+                    v.published_at,
+
+                    rs.id AS recurring_id,
+                    rs.name AS recurring_name
+
+                FROM performer_appearances pa
+
+                JOIN stereotype_segments ss
+                    ON ss.id = pa.segment_id
+
+                JOIN stereotypes_episodes se
+                    ON se.id = ss.episode_id
+
+                JOIN videos v
+                    ON v.id = se.video_id
+
+                LEFT JOIN recurring_stereotypes rs
+                    ON rs.id = ss.recurring_id
+
+                ORDER BY
+                    se.episode_number DESC,
+                    ss.segment_order
+            """),
+            {"player_id": player_id}
+        ).mappings().all()
+
+        if not appearances:
+            return None
+
+        episode_count = len({
+            appearance["episode_id"]
+            for appearance in appearances
+        })
+
+        return {
+            "id": performer["id"],
+            "name": performer["name"],
+            "slug": performer["slug"],
+            "appearance_count": len(appearances),
+            "episode_count": episode_count,
+            "appearances": [dict(row) for row in appearances]
+        }
+
+def get_recurring_stereotypes():
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("""
+                SELECT
+                    rs.id,
+                    rs.name,
+
+                    COUNT(ss.id) AS appearance_count,
+
+                    COUNT(DISTINCT se.id) AS episode_count,
+
+                    ARRAY_AGG(
+                        DISTINCT se.episode_number
+                        ORDER BY se.episode_number
+                    ) FILTER (
+                        WHERE se.episode_number IS NOT NULL
+                    ) AS episode_numbers
+
+                FROM recurring_stereotypes rs
+
+                LEFT JOIN stereotype_segments ss
+                    ON ss.recurring_id = rs.id
+
+                LEFT JOIN stereotypes_episodes se
+                    ON se.id = ss.episode_id
+
+                GROUP BY
+                    rs.id,
+                    rs.name
+
+                ORDER BY
+                    COUNT(ss.id) DESC,
+                    rs.name
+            """)
+        ).mappings().all()
+
+        return [dict(row) for row in rows]
+
+
+
 def get_stereotypes_view(video_id: int):
     with engine.connect() as conn:
 

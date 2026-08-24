@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}{{ performer.name }} - Dude Perfect Stereotype Performer{% endblock %}
+{% block description %}Every catalogued appearance by {{ performer.name }} in Dude Perfect Stereotypes.{% endblock %}
+
+{% block content %}
+
+<section class="space-y-8">
+
+  <!-- Back -->
+  <a href="/stereotypes/performers" class="text-sm text-neutral-500 hover:text-[#2EFCE6]">← Stereotype Performers</a>
+
+  <!-- Header -->
+  <header class="space-y-3">
+    <h1 class="text-3xl font-semibold text-neutral-900">
+      {{ performer.name }}
+    </h1>
+
+    <p class="text-neutral-600">
+      {{ performer.appearance_count }}
+      {% if performer.appearance_count == 1 %}
+        stereotype appearance
+      {% else %}
+        stereotype appearances
+      {% endif %}
+
+      across
+
+      {{ performer.episode_count }}
+      {% if performer.episode_count == 1 %}
+        episode
+      {% else %}
+        episodes
+      {% endif %}
+    </p>
+
+    {% if performer.slug %}
+      <div>
+        <a href="/player/{{ performer.slug }}" class="text-sm font-medium text-[#2EFCE6] hover:underline">View player profile →</a>
+      </div>
+    {% endif %}
+  </header>
+
+  <!-- Appearances -->
+  <section class="space-y-4">
+
+    <div>
+      <h2 class="text-xl font-semibold text-neutral-900">Appearances</h2>
+
+      <p class="text-sm text-neutral-500">
+        Stereotypes featuring {{ performer.name }}.
+      </p>
+    </div>
+
+    {% if performer.appearances %}
+
+      <div class="space-y-4">
+
+        {% for appearance in performer.appearances %}
+
+          <div class="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+
+            <div class="grid md:grid-cols-[240px_1fr]">
+
+              <!-- Thumbnail -->
+              {% if appearance.youtube_video_id %}
+                <a href="/videos/{{ appearance.video_id }}#stereotypes" class="block overflow-hidden bg-neutral-100">
+                  <img
+                    src="https://i.ytimg.com/vi/{{ appearance.youtube_video_id }}/hqdefault.jpg"
+                    alt="{{ appearance.theme }} Stereotypes"
+                    loading="lazy"
+                    class="h-full w-full object-cover transition duration-200 hover:scale-[1.02]"
+                  >
+                </a>
+              {% endif %}
+
+              <!-- Appearance info -->
+              <div class="p-5">
+
+                <!-- Episode -->
+                <div class="text-xs font-medium uppercase tracking-wide text-neutral-400">
+                  Stereotypes #{{ appearance.episode_number }} · {{ appearance.theme }}
+                </div>
+
+                <!-- Segment -->
+                <h3 class="mt-1 text-lg font-semibold text-neutral-900">
+                  {{ appearance.segment_name }}
+                </h3>
+
+                <!-- Performer role -->
+                <div class="mt-3">
+                  {% if appearance.is_main_performer %}
+                    <span class="rounded-md bg-[#2EFCE6]/10 px-2 py-1 text-xs font-medium text-neutral-700">
+                      Main performer
+                    </span>
+                  {% else %}
+                    <span class="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600">
+                      Featuring
+                    </span>
+                  {% endif %}
+                </div>
+
+                <!-- Recurring stereotype -->
+                {% if appearance.recurring_name %}
+                  <div class="mt-3">
+                    <a href="/stereotypes/recurring/{{ appearance.recurring_id }}" class="text-sm font-medium text-[#2EFCE6] hover:underline">
+                      ↻ {{ appearance.recurring_name }}
+                    </a>
+                  </div>
+                {% endif %}
+
+                <!-- Notes -->
+                {% if appearance.notes %}
+                  <div class="mt-3 text-sm italic text-neutral-500">
+                    {{ appearance.notes }}
+                  </div>
+                {% endif %}
+
+                <!-- Episode link -->
+                <div class="mt-4">
+                  <a href="/videos/{{ appearance.video_id }}#stereotypes" class="text-sm font-medium text-[#2EFCE6] hover:underline">View episode →</a>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+
+      <div class="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-neutral-500 italic">
+        No stereotype appearances have been catalogued for this performer.
+      </div>
+
+    {% endif %}
+
+  </section>
+
+</section>
+
+{% endblock %}

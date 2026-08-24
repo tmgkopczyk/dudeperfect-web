@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Recurring Dude Perfect Stereotypes - Dude Perfect Fan Archive{% endblock %}
+{% block description %}Browse recurring characters and stereotypes from Dude Perfect's Stereotypes series.{% endblock %}
+
+{% block content %}
+
+<section class="space-y-8">
+
+  <!-- Header -->
+  <header class="space-y-2">
+
+    <h1 class="text-3xl font-semibold text-neutral-900">
+      Recurring Stereotypes
+    </h1>
+
+    <p class="max-w-2xl text-neutral-600">
+      Characters and stereotypes that have appeared more than once
+      throughout Dude Perfect's Stereotypes series.
+    </p>
+
+  </header>
+
+  <!-- Navigation -->
+  <div class="flex flex-wrap gap-3">
+    <a href="/stereotypes" class="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium hover:border-[#2EFCE6]">Episodes</a>
+
+    <a href="/stereotypes/recurring" class="rounded-lg border border-[#2EFCE6] bg-[#2EFCE6]/10 px-4 py-2 text-sm font-medium">Recurring Stereotypes</a>
+
+    <a href="/stereotypes/performers" class="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium hover:border-[#2EFCE6]">Performers</a>
+  </div>
+
+  <!-- List -->
+  <section class="space-y-4">
+
+    <div>
+      <h2 class="text-xl font-semibold text-neutral-900">
+        Recurring Characters
+      </h2>
+
+      <p class="text-sm text-neutral-500">
+        {{ recurring | length }} recurring stereotypes catalogued
+      </p>
+    </div>
+
+    {% if recurring %}
+
+      <div class="grid gap-4 md:grid-cols-2">
+
+        {% for stereotype in recurring %}
+
+          <a
+            href="/stereotypes/recurring/{{ stereotype.id }}"
+            class="group rounded-xl border border-neutral-200 p-5 transition hover:border-[#2EFCE6] hover:shadow-sm"
+          >
+
+            <div class="flex items-start justify-between gap-4">
+
+              <div class="min-w-0">
+
+                <div class="flex items-center gap-2">
+                  <span class="text-[#2EFCE6]">
+                    ↻
+                  </span>
+
+                  <h3 class="font-semibold text-neutral-900 group-hover:text-[#2EFCE6]">
+                    {{ stereotype.name }}
+                  </h3>
+                </div>
+
+                <div class="mt-2 text-sm text-neutral-500">
+
+                  {{ stereotype.appearance_count }}
+
+                  {% if stereotype.appearance_count == 1 %}
+                    appearance
+                  {% else %}
+                    appearances
+                  {% endif %}
+
+                  {% if stereotype.episode_count %}
+                    across {{ stereotype.episode_count }}
+
+                    {% if stereotype.episode_count == 1 %}
+                      episode
+                    {% else %}
+                      episodes
+                    {% endif %}
+                  {% endif %}
+
+                </div>
+
+              </div>
+
+              <span class="text-neutral-300 group-hover:text-[#2EFCE6]">
+                →
+              </span>
+
+            </div>
+
+            {% if stereotype.episode_numbers %}
+              <div class="mt-4 flex flex-wrap gap-2">
+
+                {% for number in stereotype.episode_numbers %}
+                  <span
+                    class="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600"
+                  >
+                    #{{ number }}
+                  </span>
+                {% endfor %}
+
+              </div>
+            {% endif %}
+
+          </a>
+
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+
+      <div class="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-neutral-500">
+        No recurring stereotypes have been catalogued yet.
+      </div>
+
+    {% endif %}
+
+  </section>
+
+</section>
+
+{% endblock %}

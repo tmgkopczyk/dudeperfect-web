@@ -117,6 +117,47 @@ def stereotypes_landing_page(request: Request):
         "episodes": episodes
     })
 
+@pages.get("/stereotypes/recurring", response_class=HTMLResponse)
+def recurring_stereotypes_page(request: Request):
+    recurring = queries.get_recurring_stereotypes()
+
+    return render(
+        request,
+        "stereotypes/recurring.html",
+        {
+            "recurring": recurring
+        }
+    )
+
+@pages.get(
+    "/stereotypes/recurring/{recurring_id}",
+    response_class=HTMLResponse
+)
+def recurring_stereotype_detail(
+    request: Request,
+    recurring_id: int
+):
+    recurring = queries.get_recurring_stereotype(recurring_id)
+
+    if not recurring:
+        raise HTTPException(404)
+
+    return render(
+        request,
+        "stereotypes/recurring_detail.html",
+        {
+            "recurring": recurring
+        }
+    )
+
+@pages.get("/stereotypes/performers", response_class=HTMLResponse)
+def stereotype_performers_page(request: Request):
+    performers = queries.get_stereotype_performers()
+
+    return render(request, "stereotypes/performers.html", {
+        "performers": performers
+    })
+
 
 @pages.get("/contact", response_class=HTMLResponse)
 def contact_page(request: Request):
@@ -318,6 +359,27 @@ def players_index(request: Request):
         "players/index.html",
         {
             "players": players
+        }
+    )
+
+@pages.get(
+    "/stereotypes/performers/{player_id}",
+    response_class=HTMLResponse
+)
+def stereotype_performer_detail(
+    request: Request,
+    player_id: int
+):
+    performer = queries.get_stereotype_performer_view(player_id)
+
+    if not performer:
+        raise HTTPException(404)
+
+    return render(
+        request,
+        "stereotypes/performer_detail.html",
+        {
+            "performer": performer
         }
     )
 

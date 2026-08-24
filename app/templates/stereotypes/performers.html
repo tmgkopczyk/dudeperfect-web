@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Stereotype Performers - Dude Perfect Fan Archive{% endblock %}
+{% block description %}Browse everyone who has appeared in Dude Perfect Stereotypes.{% endblock %}
+
+{% block content %}
+
+<section class="space-y-10">
+
+  <!-- Header -->
+  <header class="space-y-2">
+    <h1 class="text-3xl font-semibold text-neutral-900">Stereotype Performers</h1>
+
+    <p class="max-w-2xl text-neutral-600">
+      Browse everyone catalogued as appearing in Dude Perfect Stereotypes.
+    </p>
+  </header>
+
+  <!-- Navigation -->
+  <div class="flex flex-wrap gap-3">
+    <a href="/stereotypes" class="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium hover:border-[#2EFCE6]">Episodes</a>
+
+    <a href="/stereotypes/recurring" class="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium hover:border-[#2EFCE6]">Recurring Stereotypes</a>
+
+    <a href="/stereotypes/performers" class="rounded-lg border border-[#2EFCE6] bg-[#2EFCE6]/10 px-4 py-2 text-sm font-medium">Performers</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="rounded-xl border border-neutral-200 bg-white p-5">
+    <div class="text-3xl font-semibold text-neutral-900">
+      {{ performers | length }}
+    </div>
+
+    <div class="mt-1 text-sm text-neutral-500">
+      Performers catalogued
+    </div>
+  </div>
+
+  <!-- Performers -->
+  <section class="space-y-4">
+
+    <div>
+      <h2 class="text-2xl font-semibold text-neutral-900">Performers</h2>
+
+      <p class="text-sm text-neutral-500">
+        Ranked by the number of stereotypes they have appeared in.
+      </p>
+    </div>
+
+    {% if performers %}
+
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+        {% for performer in performers %}
+
+          <a href="/stereotypes/performers/{{ performer.id }}" class="group rounded-xl border border-neutral-200 bg-white p-5 transition hover:border-[#2EFCE6] hover:shadow-md">
+
+            <div class="flex items-start justify-between gap-4">
+
+              <div class="min-w-0">
+                <h3 class="text-lg font-semibold text-neutral-900 group-hover:text-[#2EFCE6]">
+                  {{ performer.name }}
+                </h3>
+
+                <div class="mt-2 text-sm text-neutral-500">
+                  {{ performer.stereotype_count }}
+                  {% if performer.stereotype_count == 1 %}
+                    stereotype
+                  {% else %}
+                    stereotypes
+                  {% endif %}
+
+                  <span class="mx-1 text-neutral-300">•</span>
+
+                  {{ performer.episode_count }}
+                  {% if performer.episode_count == 1 %}
+                    episode
+                  {% else %}
+                    episodes
+                  {% endif %}
+                </div>
+              </div>
+
+              <span class="text-neutral-300 group-hover:text-[#2EFCE6]">→</span>
+
+            </div>
+
+          </a>
+
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+
+      <div class="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-neutral-500 italic">
+        No stereotype performers have been catalogued yet.
+      </div>
+
+    {% endif %}
+
+  </section>
+
+</section>
+
+{% endblock %}

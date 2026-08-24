@@ -15,21 +15,61 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
 
       <!-- Brand -->
-      <a href="/" class="font-semibold text-[#2EFCE6] hover:text-[#22D3C5]">
-        Dude Perfect Fan Archive
-      </a>
+      <a href="/" class="font-semibold text-[#2EFCE6] hover:text-[#22D3C5]">Dude Perfect Fan Archive</a>
 
       <!-- Nav links -->
-      <nav class="ml-auto flex gap-4 sm:gap-6 text-sm sm:text-base">
+      <nav class="ml-auto flex items-center gap-4 sm:gap-6 text-sm sm:text-base">
+
+        <!-- Songs -->
         <a href="/songs" class="hover:text-[#2EFCE6]">Songs</a>
+
+        <!-- Artists -->
         <a href="/artists" class="hover:text-[#2EFCE6]">Artists</a>
-        <a href="/videos" class="hover:text-[#2EFCE6]">Videos</a>
-        <a href="/videos/categories" class="hover:text-[#2EFCE6]">Categories</a>
+
+        <!-- Videos -->
+        <div class="relative group">
+          <a href="/videos" class="flex items-center gap-1 hover:text-[#2EFCE6]">
+            Videos
+            <span class="text-xs">▾</span>
+          </a>
+
+          <!-- Videos dropdown -->
+          <div class="invisible absolute right-0 top-full z-50 pt-3 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+            <div class="w-48 overflow-hidden rounded-lg border border-neutral-700 bg-[#1F1F1F] shadow-lg">
+              <a href="/videos" class="block px-4 py-3 hover:bg-neutral-800 hover:text-[#2EFCE6]">All Videos</a>
+              <a href="/videos/categories" class="block px-4 py-3 hover:bg-neutral-800 hover:text-[#2EFCE6]">Video Categories</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stereotypes -->
+        <div class="relative group">
+          <a href="/stereotypes" class="flex items-center gap-1 hover:text-[#2EFCE6]">
+            Stereotypes
+            <span class="text-xs">▾</span>
+          </a>
+
+          <!-- Stereotypes dropdown -->
+          <div class="invisible absolute right-0 top-full z-50 pt-3 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+            <div class="w-56 overflow-hidden rounded-lg border border-neutral-700 bg-[#1F1F1F] shadow-lg">
+              <a href="/stereotypes" class="block px-4 py-3 hover:bg-neutral-800 hover:text-[#2EFCE6]">Episodes</a>
+              <a href="/stereotypes/recurring" class="block px-4 py-3 hover:bg-neutral-800 hover:text-[#2EFCE6]">Recurring Stereotypes</a>
+              <a href="/stereotypes/performers" class="block px-4 py-3 hover:bg-neutral-800 hover:text-[#2EFCE6]">Performers</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Players -->
         <a href="/players" class="hover:text-[#2EFCE6]">Players</a>
+
+        <!-- Forums -->
         <a href="https://forums.dudeperfectfanarchive.com" class="hover:text-[#2EFCE6]">Forums</a>
+
+        <!-- Contact -->
         <a href="/contact" class="text-gray-400 hover:text-[#2EFCE6]">Contact</a>
-        <a href="/stereotypes">Stereotypes</a>
+
       </nav>
+
     </div>
   </header>
 
