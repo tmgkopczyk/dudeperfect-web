@@ -109,6 +109,14 @@ def home(request: Request):
 def search_home(request: Request):
     return render(request, "search/index.html")
 
+@pages.get("/stereotypes", response_class=HTMLResponse)
+def stereotypes_landing_page(request: Request):
+    episodes = queries.get_stereotypes_episodes()
+
+    return render(request, "stereotypes/stereotypes_landing.html", {
+        "episodes": episodes
+    })
+
 
 @pages.get("/contact", response_class=HTMLResponse)
 def contact_page(request: Request):

@@ -1016,6 +1016,38 @@ def get_bucket_list_view(video_id: int):
             "tasks": [dict(t) for t in tasks]
         }
 
+def get_stereotypes_episodes():
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("""
+                SELECT
+                    se.id,
+                    se.video_id,
+                    se.episode_number,
+                    se.theme,
+                    v.title,
+                    v.youtube_video_id,
+                    v.published_at,
+                    COUNT(ss.id) AS segment_count
+                FROM stereotypes_episodes se
+                JOIN videos v
+                    ON v.id = se.video_id
+                LEFT JOIN stereotype_segments ss
+                    ON ss.episode_id = se.id
+                GROUP BY
+                    se.id,
+                    se.video_id,
+                    se.episode_number,
+                    se.theme,
+                    v.title,
+                    v.youtube_video_id,
+                    v.published_at
+                ORDER BY se.episode_number DESC
+            """)
+        ).mappings().all()
+
+        return [dict(row) for row in rows]
+
 def get_stereotypes_view(video_id: int):
     with engine.connect() as conn:
 
@@ -1033,7 +1065,7 @@ def get_stereotypes_view(video_id: int):
         if not episode:
             return None
 
-        # 2️⃣ Get segments (no performer join here anymore)
+        # 2️⃣ Get segments
         segments = conn.execute(
             text("""
                 SELECT
@@ -1042,10 +1074,21 @@ def get_stereotypes_view(video_id: int):
                     s.name,
                     s.timestamp_seconds,
                     s.notes,
+
+                    p.id AS main_performer_id,
+                    p.name AS main_performer,
+
+                    r.id AS recurring_id,
                     r.name AS recurring_name
+
                 FROM stereotype_segments s
+
+                LEFT JOIN players p
+                    ON p.id = s.performer_id
+
                 LEFT JOIN recurring_stereotypes r
                     ON r.id = s.recurring_id
+
                 WHERE s.episode_id = :episode_id
                 ORDER BY s.segment_order
             """),
@@ -1056,12 +1099,14 @@ def get_stereotypes_view(video_id: int):
 
         for seg in segments:
 
-            performers = conn.execute(
+            other_performers = conn.execute(
                 text("""
-                    SELECT p.name
+                    SELECT
+                        p.id,
+                        p.name
                     FROM stereotype_segment_performers ssp
                     JOIN players p
-                      ON p.id = ssp.player_id
+                        ON p.id = ssp.player_id
                     WHERE ssp.segment_id = :segment_id
                     ORDER BY p.name
                 """),
@@ -1069,20 +1114,34 @@ def get_stereotypes_view(video_id: int):
             ).mappings().all()
 
             formatted_segments.append({
+                "id": seg["id"],
                 "segment_order": seg["segment_order"],
                 "name": seg["name"],
                 "timestamp_seconds": seg["timestamp_seconds"],
                 "notes": seg["notes"],
-                "recurring_name": seg["recurring_name"],
-                "performers": [p["name"] for p in performers]
+
+                "main_performer_id": seg["main_performer_id"],
+                "main_performer": seg["main_performer"],
+
+                "other_performers": [
+                    {
+                        "id": p["id"],
+                        "name": p["name"]
+                    }
+                    for p in other_performers
+                ],
+
+                "recurring_id": seg["recurring_id"],
+                "recurring_name": seg["recurring_name"]
             })
 
         return {
+            "id": episode["id"],
             "episode_number": episode["episode_number"],
             "theme": episode["theme"],
             "segments": formatted_segments
         }
-
+        
 def get_song_detail(song_id: int):
     sql = text("""
     SELECT
@@ -1181,6 +1240,7 @@ def search_songs(query: str, limit: int = 50):
     }
     for row in rows
     ]
+
 
 def get_all_artists():
     sql = text("""

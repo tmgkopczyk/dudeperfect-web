@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Dude Perfect Stereotypes - Dude Perfect Fan Archive{% endblock %}
+{% block description %}Browse every Dude Perfect Stereotypes episode, recurring stereotypes, performers, and individual segments.{% endblock %}
+
+{% block content %}
+
+<section class="space-y-8">
+
+  <!-- Header -->
+  <header class="space-y-2">
+    <h1 class="text-3xl font-semibold text-neutral-900">
+      Dude Perfect Stereotypes
+    </h1>
+
+    <p class="text-neutral-600 max-w-2xl">
+      Explore Dude Perfect's Stereotypes series, including individual
+      stereotypes, performers, and recurring characters.
+    </p>
+  </header>
+
+  <!-- Navigation -->
+  <div class="flex flex-wrap gap-3">
+
+    <a
+      href="/stereotypes"
+      class="rounded-lg border border-[#2EFCE6] bg-[#2EFCE6]/10 px-4 py-2 text-sm font-medium"
+    >
+      Episodes
+    </a>
+
+    <a
+      href="/stereotypes/recurring"
+      class="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium hover:border-[#2EFCE6]"
+    >
+      Recurring Stereotypes
+    </a>
+
+  </div>
+
+  <!-- Episodes -->
+  <section class="space-y-4">
+
+    <div class="flex items-end justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-semibold text-neutral-900">
+          Episodes
+        </h2>
+
+        <p class="text-sm text-neutral-500">
+          {{ episodes | length }} episodes
+        </p>
+      </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+
+      {% for episode in episodes %}
+
+        <a
+          href="/videos/{{ episode.video_id }}"
+          class="group block rounded-xl border border-neutral-200 p-5 transition hover:border-[#2EFCE6] hover:shadow-sm"
+        >
+
+          <div class="flex items-start justify-between gap-4">
+
+            <div class="min-w-0">
+
+              <div class="text-xs font-medium uppercase tracking-wide text-neutral-400">
+                Stereotypes #{{ episode.episode_number }}
+              </div>
+
+              <h3 class="mt-1 text-lg font-semibold text-neutral-900 group-hover:text-[#2EFCE6]">
+                {{ episode.theme }} Stereotypes
+              </h3>
+
+            </div>
+
+            <div class="text-neutral-300 group-hover:text-[#2EFCE6]">
+              →
+            </div>
+
+          </div>
+
+          <div class="mt-4 text-sm text-neutral-500">
+
+            {% if episode.segment_count > 0 %}
+              {{ episode.segment_count }}
+              {% if episode.segment_count == 1 %}
+                stereotype
+              {% else %}
+                stereotypes
+              {% endif %}
+              catalogued
+            {% else %}
+              <span class="italic">
+                Segments not yet catalogued
+              </span>
+            {% endif %}
+
+          </div>
+
+        </a>
+
+      {% endfor %}
+
+    </div>
+
+  </section>
+
+</section>
+
+{% endblock %}
