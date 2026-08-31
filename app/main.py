@@ -31,6 +31,27 @@ app.add_url_rule(
     endpoint="sitemap",
     view_func=sitemap,
 )
+@app.before_request
+def log_request():
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    user_agent = request.headers.get("User-Agent")
+    referer = request.headers.get("Referer")
+
+    path = request.full_path
+    if path.endswith("?"):
+        path = path[:-1]
+
+    print(
+        f"REQUEST "
+        f"method={request.method} "
+        f"path={path!r} "
+        f"cf_ip={cf_ip!r} "
+        f"x_forwarded_for={forwarded_for!r} "
+        f"user_agent={user_agent!r} "
+        f"referer={referer!r}",
+        flush=True,
+    )
 
 # =========================
 # Config
@@ -465,7 +486,7 @@ def api_video(video_id):
 
 if __name__ == "__main__":
     app.run(
-        host="192.168.68.68",
+        host="127.0.0.1",
         port=8081,
         debug=True,
     )

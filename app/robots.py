@@ -2,11 +2,13 @@ from flask import Response
 
 
 ROBOTS_TXT = """User-agent: *
+
+# Internal/application endpoints
 Disallow: /api/
-Disallow: /docs
-Disallow: /openapi.json
-Disallow: /debug/
 Disallow: /contact/submit
+
+# Avoid crawling search-result combinations
+Disallow: /search?
 
 Sitemap: https://dudeperfectfanarchive.com/sitemap.xml
 """
