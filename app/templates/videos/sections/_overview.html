@@ -1,0 +1,156 @@
+<div>
+  <h2 class="text-xl font-medium text-neutral-900">
+    Overview
+  </h2>
+
+  <p class="mt-1 text-sm text-neutral-500">
+    Archive information available for this video.
+  </p>
+</div>
+
+<div class="divide-y divide-neutral-200 border-y border-neutral-200">
+
+  {% if battle %}
+  <button
+    type="button"
+    onclick="showTab('battle')"
+    class="flex w-full items-center justify-between gap-4 py-4 text-left hover:text-[#2EFCE6]"
+  >
+    <div>
+      <div class="font-semibold text-neutral-900">
+        Battle
+      </div>
+
+      {% if battle.winner %}
+        <div class="text-sm text-neutral-500">
+          Winner: {{ battle.winner }}
+        </div>
+      {% endif %}
+    </div>
+
+    <span class="text-neutral-400">→</span>
+  </button>
+  {% endif %}
+
+
+  {% if overtime %}
+  <button
+    type="button"
+    onclick="showTab('overtime')"
+    class="flex w-full items-center justify-between gap-4 py-4 text-left hover:text-[#2EFCE6]"
+  >
+    <div>
+      <div class="font-semibold text-neutral-900">
+        Overtime
+      </div>
+
+      <div class="text-sm text-neutral-500">
+        {{ overtime.segments | length }}
+        {% if overtime.segments | length == 1 %}
+          segment
+        {% else %}
+          segments
+        {% endif %}
+      </div>
+    </div>
+
+    <span class="text-neutral-400">→</span>
+  </button>
+  {% endif %}
+
+
+  {% if bucket_list %}
+  <button
+    type="button"
+    onclick="showTab('bucket-list')"
+    class="flex w-full items-center justify-between gap-4 py-4 text-left hover:text-[#2EFCE6]"
+  >
+    <div>
+      <div class="font-semibold text-neutral-900">
+        Bucket List
+      </div>
+
+      <div class="text-sm text-neutral-500">
+        Episode {{ bucket_list.episode_number }}
+        ·
+        {{ bucket_list.tasks | length }}
+        {% if bucket_list.tasks | length == 1 %}
+          task
+        {% else %}
+          tasks
+        {% endif %}
+      </div>
+    </div>
+
+    <span class="text-neutral-400">→</span>
+  </button>
+  {% endif %}
+
+
+  {% if stereotypes %}
+  <button
+    type="button"
+    onclick="showTab('stereotypes')"
+    class="flex w-full items-center justify-between gap-4 py-4 text-left hover:text-[#2EFCE6]"
+  >
+    <div>
+      <div class="font-semibold text-neutral-900">
+        {{ stereotypes.theme }} Stereotypes
+      </div>
+
+      <div class="text-sm text-neutral-500">
+        Episode {{ stereotypes.episode_number }}
+        ·
+        {{ stereotypes.segments | length }}
+        {% if stereotypes.segments | length == 1 %}
+          stereotype
+        {% else %}
+          stereotypes
+        {% endif %}
+      </div>
+    </div>
+
+    <span class="text-neutral-400">→</span>
+  </button>
+  {% endif %}
+
+
+  {% if video.songs %}
+  <button
+    type="button"
+    onclick="showTab('songs')"
+    class="flex w-full items-center justify-between gap-4 py-4 text-left hover:text-[#2EFCE6]"
+  >
+    <div>
+      <div class="font-semibold text-neutral-900">
+        Music
+      </div>
+
+      <div class="text-sm text-neutral-500">
+        {{ video.songs | length }}
+        {% if video.songs | length == 1 %}
+          song
+        {% else %}
+          songs
+        {% endif %}
+      </div>
+    </div>
+
+    <span class="text-neutral-400">→</span>
+  </button>
+  {% endif %}
+
+</div>
+
+
+{% if not battle
+      and not overtime
+      and not bucket_list
+      and not stereotypes
+      and not video.songs %}
+
+<div class="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
+  No additional archive information has been added for this video yet.
+</div>
+
+{% endif %}

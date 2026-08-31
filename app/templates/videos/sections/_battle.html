@@ -13,10 +13,27 @@
 
     <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
         {% for player in battle.teams[0].players %}
-        <li class="flex items-center gap-2 border rounded px-3 py-2 bg-white">
-            {{ player.name }}
+        <li
+            class="flex items-center gap-2 border rounded px-3 py-2 bg-white"
+            {% if player.accent_color %}
+                style="border-top: 6px solid {{ player.accent_color }};"
+            {% endif %}
+        >
+            {% if player.slug %}
+                <a
+                    href="{{ url_for('player_page', slug=player.slug) }}"
+                    class="font-medium hover:text-[#2EFCE6] hover:underline"
+                >
+                    {{ player.name }}
+                </a>
+            {% else %}
+                <span class="font-medium">
+                    {{ player.name }}
+                </span>
+            {% endif %}
+
             {% if player.is_guest %}
-            <span title="Guest">⭐</span>
+                <span title="Guest">⭐</span>
             {% endif %}
         </li>
         {% endfor %}
@@ -32,14 +49,26 @@
             </h4>
 
             <ul class="space-y-2 text-sm">
-            {% for player in team.players %}
-                <li class="flex items-center gap-2">
-                {{ player.name }}
-                {% if player.is_guest %}
-                    <span title="Guest">⭐</span>
-                {% endif %}
-                </li>
-            {% endfor %}
+                {% for player in team.players %}
+                    <li class="flex items-center gap-2">
+
+                        {% if player.slug %}
+                        <a
+                            href="{{ url_for('player_page', slug=player.slug) }}"
+                            class="font-medium hover:text-[#2EFCE6] hover:underline"
+                        >
+                            {{ player.name }}
+                        </a>
+                        {% else %}
+                            {{ player.name }}
+                        {% endif %}
+
+                        {% if player.is_guest %}
+                            <span title="Guest">⭐</span>
+                        {% endif %}
+
+                    </li>
+                    {% endfor %}
             </ul>
         </div>
         {% endfor %}

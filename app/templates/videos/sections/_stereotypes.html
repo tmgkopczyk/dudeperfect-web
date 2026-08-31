@@ -1,0 +1,95 @@
+<section class="space-y-4">
+
+  <div>
+    <h2 class="text-xl font-medium text-neutral-900">
+      {{ stereotypes.theme }} Stereotypes
+    </h2>
+
+    <div class="text-sm text-neutral-500">
+      Stereotypes #{{ stereotypes.episode_number }}
+      · {{ stereotypes.segments | length }} stereotypes
+    </div>
+  </div>
+
+  {% if stereotypes.segments %}
+
+    <div class="divide-y divide-neutral-200 border-y border-neutral-200">
+
+      {% for segment in stereotypes.segments %}
+      <div class="py-4 flex gap-4">
+
+        <div class="w-8 shrink-0 text-right text-sm font-medium text-neutral-400">
+          {{ segment.segment_order }}.
+        </div>
+
+        <div class="min-w-0 flex-1">
+
+          <div class="font-semibold text-neutral-900">
+            {{ segment.name }}
+          </div>
+
+          {% if segment.main_performer %}
+            <div class="text-sm text-neutral-600">
+              Played by
+
+              <a
+                href="/stereotypes/performers/{{ segment.main_performer_id }}"
+                class="font-medium hover:text-[#2EFCE6]"
+              >
+                {{ segment.main_performer }}
+              </a>
+            </div>
+          {% endif %}
+
+          {% if segment.other_performers %}
+            <div class="text-sm text-neutral-600">
+
+              {% if segment.main_performer %}
+                Also featuring
+              {% else %}
+                Featuring
+              {% endif %}
+
+              {% for performer in segment.other_performers -%}
+                <a
+                  href="/stereotypes/performers/{{ performer.id }}"
+                  class="font-medium hover:text-[#2EFCE6]"
+                >
+                  {{ performer.name }}
+                </a>{% if not loop.last %}, {% endif %}
+              {%- endfor %}
+
+            </div>
+          {% endif %}
+
+          {% if segment.recurring_name %}
+            <a
+              href="/stereotypes/recurring/{{ segment.recurring_id }}"
+              class="mt-1 block text-xs font-medium text-[#2EFCE6] hover:underline"
+            >
+              ↻ Recurring stereotype: {{ segment.recurring_name }}
+            </a>
+          {% endif %}
+
+          {% if segment.notes %}
+            <div class="mt-1 text-sm italic text-neutral-500">
+              {{ segment.notes }}
+            </div>
+          {% endif %}
+
+        </div>
+
+      </div>
+      {% endfor %}
+
+    </div>
+
+  {% else %}
+
+    <div class="text-neutral-500 italic bg-gray-50 border rounded p-3">
+      Stereotype segments have not been added for this episode yet.
+    </div>
+
+  {% endif %}
+
+</section>

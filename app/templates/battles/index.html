@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Battles - Dude Perfect{% endblock %}
+{% block description %}Browse Dude Perfect battles, winners, competitors, rounds, and results.{% endblock %}
+
+{% block content %}
+
+<section class="space-y-6">
+
+  <header>
+    <h1 class="text-3xl font-semibold text-neutral-900">
+      Battles
+    </h1>
+
+    <p class="mt-1 text-neutral-600">
+      Browse Dude Perfect battles, winners, competitors, rounds, and results.
+    </p>
+  </header>
+
+  <div class="text-sm text-neutral-500">
+    {{ battles | length }}
+    {% if battles | length == 1 %}
+      battle
+    {% else %}
+      battles
+    {% endif %}
+  </div>
+
+  {% if battles %}
+
+    <div class="divide-y divide-neutral-200 border-y border-neutral-200">
+
+      {% for battle in battles %}
+
+        <a
+          href="{{ url_for('battle_detail', battle_id=battle.battle_id) }}"
+          class="group flex items-center justify-between gap-6 py-4"
+        >
+
+          <div class="min-w-0">
+
+            <div class="font-semibold text-neutral-900 group-hover:text-[#2EFCE6]">
+              {{ battle.title }}
+            </div>
+
+            <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-500">
+
+              {% if battle.winner %}
+                <span>
+                  🏆 Winner: {{ battle.winner }}
+                </span>
+              {% endif %}
+
+              {% if battle.published_at %}
+                <span>
+                  {{ battle.published_at.strftime("%B") }}
+                  {{ battle.published_at.day }},
+                  {{ battle.published_at.year }}
+                </span>
+              {% endif %}
+
+            </div>
+
+          </div>
+
+          <span class="shrink-0 text-neutral-400 group-hover:text-[#2EFCE6]">
+            →
+          </span>
+
+        </a>
+
+      {% endfor %}
+
+    </div>
+
+  {% else %}
+
+    <div class="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-neutral-500">
+      No battles have been added yet.
+    </div>
+
+  {% endif %}
+
+</section>
+
+{% endblock %}

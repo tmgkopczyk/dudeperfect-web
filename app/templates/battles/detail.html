@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ video.title }} - Battle - Dude Perfect{% endblock %}
+{% block description %}Battle competitors, rounds, rules, and results for {{ video.title }}.{% endblock %}
+
+{% block content %}
+
+<section class="space-y-8">
+
+  <!-- Back -->
+  <a
+    href="{{ url_for('battles_page') }}"
+    class="text-sm text-neutral-500 hover:text-[#2EFCE6]"
+  >
+    ← Battles
+  </a>
+
+  <!-- Header -->
+  <header class="space-y-2">
+
+    <div class="text-sm font-medium text-neutral-500">
+      Battle
+    </div>
+
+    <h1 class="text-3xl font-semibold text-neutral-900">
+      {{ video.title }}
+    </h1>
+
+    {% if video.published_at %}
+      <div class="text-sm text-neutral-500">
+        {{ video.published_at.strftime("%B") }}
+        {{ video.published_at.day }},
+        {{ video.published_at.year }}
+      </div>
+    {% endif %}
+
+    <a
+      href="{{ url_for('video_detail', video_id=video.id) }}#battle"
+      class="inline-block text-sm font-medium text-[#2EFCE6] hover:underline"
+    >
+      View video →
+    </a>
+
+  </header>
+
+  <!-- Winner -->
+  {% if battle.winner %}
+  <section class="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+
+    <div class="text-xs font-medium uppercase tracking-wide text-green-600">
+      Winner
+    </div>
+
+    <div class="mt-1 text-lg font-semibold text-green-800">
+      🏆 {{ battle.winner }}
+    </div>
+
+  </section>
+  {% endif %}
+
+  <!-- Battle Information -->
+  {% if battle.description or battle.rules or battle.notes %}
+  <section class="space-y-4">
+
+    <h2 class="text-xl font-medium text-neutral-900">
+      Battle Information
+    </h2>
+
+    {% if battle.description %}
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-700">
+        Description
+      </h3>
+
+      <p class="mt-1 text-neutral-600">
+        {{ battle.description }}
+      </p>
+    </div>
+    {% endif %}
+
+    {% if battle.rules %}
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-700">
+        Rules
+      </h3>
+
+      <p class="mt-1 text-neutral-600">
+        {{ battle.rules }}
+      </p>
+    </div>
+    {% endif %}
+
+    {% if battle.notes %}
+    <div>
+      <h3 class="text-sm font-semibold text-neutral-700">
+        Notes
+      </h3>
+
+      <p class="mt-1 text-neutral-600">
+        {{ battle.notes }}
+      </p>
+    </div>
+    {% endif %}
+
+  </section>
+  {% endif %}
+
+  <!-- Players / Teams / Rounds -->
+  {% include "videos/sections/_battle.html" %}
+
+</section>
+
+{% endblock %}

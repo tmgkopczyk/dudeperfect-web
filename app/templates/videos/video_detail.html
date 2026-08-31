@@ -18,13 +18,16 @@
 
   <!-- Title -->
   <header class="space-y-1">
+
     <h1 class="text-3xl font-semibold text-neutral-900">
       {{ video.title }}
     </h1>
 
     {% if video.published_at %}
       <div class="text-sm text-neutral-500">
-        Published: {{ video.published_at }}
+        Published {{ video.published_at.strftime("%B") }}
+        {{ video.published_at.day }},
+        {{ video.published_at.year }}
       </div>
     {% endif %}
 
@@ -38,13 +41,18 @@
         Watch on YouTube →
       </a>
     {% endif %}
+
   </header>
 
-  <!-- Thumbnail -->
+
+  <!-- Video -->
   {% if video.youtube_video_id %}
   <div class="mt-4 max-w-4xl mx-auto">
-    <div class="relative w-full overflow-hidden rounded-xl shadow-lg"
-        style="padding-bottom:56.25%;">
+
+    <div
+      class="relative w-full overflow-hidden rounded-xl shadow-lg"
+      style="padding-bottom: 56.25%;"
+    >
 
       <iframe
         class="absolute inset-0 w-full h-full"
@@ -57,227 +65,164 @@
       </iframe>
 
     </div>
+
   </div>
   {% endif %}
+
 
   <!-- Tabs -->
   <div class="border-b border-neutral-200">
+
     <nav class="flex gap-6 text-sm font-medium">
 
-        <button
-    type="button"
-    id="tab-overview"
-    onclick="showTab('overview')"
-    class="tab-btn text-[#2EFCE6] pb-2 border-b-2 border-[#2EFCE6]"
-  >
-    Overview
-  </button>
+      <button
+        type="button"
+        id="tab-overview"
+        onclick="showTab('overview')"
+        class="tab-btn text-[#2EFCE6] pb-2 border-b-2 border-[#2EFCE6]"
+      >
+        Overview
+      </button>
 
-  {% if battle %}
-  <button
-    type="button"
-    id="tab-battle"
-    onclick="showTab('battle')"
-    class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
-  >
-    Battle
-  </button>
-  {% endif %}
 
-  {% if overtime %}
-  <button
-    type="button"
-    id="tab-overtime"
-    onclick="showTab('overtime')"
-    class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
-  >
-    Overtime
-  </button>
-  {% endif %}
+      {% if battle %}
+      <button
+        type="button"
+        id="tab-battle"
+        onclick="showTab('battle')"
+        class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
+      >
+        Battle
+      </button>
+      {% endif %}
 
-  {% if stereotypes %}
-  <button
-    type="button"
-    id="tab-stereotypes"
-    onclick="showTab('stereotypes')"
-    class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
-  >
-    Stereotypes
-  </button>
-  {% endif %}
 
-  <button
-    type="button"
-    id="tab-songs"
-    onclick="showTab('songs')"
-    class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
-  >
-    Songs
-  </button>
+      {% if overtime %}
+      <button
+        type="button"
+        id="tab-overtime"
+        onclick="showTab('overtime')"
+        class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
+      >
+        Overtime
+      </button>
+      {% endif %}
+
+
+      {% if bucket_list %}
+      <button
+        type="button"
+        id="tab-bucket-list"
+        onclick="showTab('bucket-list')"
+        class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
+      >
+        Bucket List
+      </button>
+      {% endif %}
+
+
+      {% if stereotypes %}
+      <button
+        type="button"
+        id="tab-stereotypes"
+        onclick="showTab('stereotypes')"
+        class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
+      >
+        Stereotypes
+      </button>
+      {% endif %}
+
+
+      <button
+        type="button"
+        id="tab-songs"
+        onclick="showTab('songs')"
+        class="tab-btn pb-2 border-b-2 border-transparent hover:border-[#2EFCE6]"
+      >
+        Songs
+      </button>
 
     </nav>
+
   </div>
+
 
   <!-- Overview -->
-  <div id="tab-content-overview" class="tab-content space-y-6">
-
-    {% if battle and battle.winner %}
-    <div class="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-      <span class="text-lg">🏆</span>
-      <span class="text-sm font-semibold text-green-700">
-        Winner: {{ battle.winner }}
-      </span>
-    </div>
-    {% endif %}
-
-    <p class="text-neutral-600">
-      Explore battle details, overtime segments, and songs used in this video.
-    </p>
-
+  <div
+    id="tab-content-overview"
+    class="tab-content space-y-6"
+  >
+    {% include "videos/sections/_overview.html" %}
   </div>
+
 
   <!-- Battle -->
-  <div id="tab-content-battle" class="tab-content hidden space-y-6">
+  {% if battle %}
+  <div
+    id="tab-content-battle"
+    class="tab-content hidden space-y-6"
+  >
     {% include "videos/sections/_battle.html" %}
-  </div>
-    
-
-  <!-- Overtime -->
-  <div id="tab-content-overtime" class="tab-content hidden space-y-6">
-    {% include "videos/sections/_overtime.html" %}
-  </div>
-
-  {% if stereotypes %}
-  <!-- Stereotypes -->
-  <div id="tab-content-stereotypes" class="tab-content hidden space-y-6">
-    <section class="space-y-4">
-
-      <div>
-        <h2 class="text-xl font-medium text-neutral-900">
-          {{ stereotypes.theme }} Stereotypes
-        </h2>
-
-        <div class="text-sm text-neutral-500">
-          Stereotypes #{{ stereotypes.episode_number }}
-          · {{ stereotypes.segments | length }} stereotypes
-        </div>
-      </div>
-
-      {% if stereotypes.segments %}
-
-        <div class="divide-y divide-neutral-200 border-y border-neutral-200">
-
-          {% for segment in stereotypes.segments %}
-          <div class="py-4 flex gap-4">
-
-            <!-- Number -->
-            <div class="w-8 shrink-0 text-right text-sm font-medium text-neutral-400">
-              {{ segment.segment_order }}.
-            </div>
-
-            <!-- Segment -->
-            <div class="min-w-0 flex-1">
-
-              <!-- Name -->
-              <div class="font-semibold text-neutral-900">
-                {{ segment.name }}
-              </div>
-
-              <!-- Main performer -->
-              {% if segment.main_performer %}
-                <div class="text-sm text-neutral-600">
-                  Played by
-
-                  <a href="/stereotypes/performers/{{ segment.main_performer_id }}" class="font-medium hover:text-[#2EFCE6]">
-                    {{ segment.main_performer }}
-                  </a>
-                </div>
-              {% endif %}
-
-              <!-- Other performers -->
-              {% if segment.other_performers %}
-                <div class="text-sm text-neutral-600">
-                  {% if segment.main_performer %}
-                    Also featuring
-                  {% else %}
-                    Featuring
-                  {% endif %}
-
-                  {% for performer in segment.other_performers -%}
-                    <a href="/stereotypes/performers/{{ performer.id }}" class="font-medium hover:text-[#2EFCE6]">{{ performer.name }}</a>{% if not loop.last %}, {% endif %}
-                  {%- endfor %}
-                </div>
-              {% endif %}
-
-              <!-- Recurring stereotype -->
-              {% if segment.recurring_name %}
-                <a href="/stereotypes/recurring/{{ segment.recurring_id }}" class="mt-1 block text-xs font-medium text-[#2EFCE6] hover:underline">
-                  ↻ Recurring stereotype: {{ segment.recurring_name }}
-                </a>
-              {% endif %}
-
-              <!-- Notes -->
-              {% if segment.notes %}
-                <div class="mt-1 text-sm italic text-neutral-500">
-                  {{ segment.notes }}
-                </div>
-              {% endif %}
-
-            </div>
-
-          </div>
-          {% endfor %}
-
-        </div>
-
-      {% else %}
-
-        <div class="text-neutral-500 italic bg-gray-50 border rounded p-3">
-          Stereotype segments have not been added for this episode yet.
-        </div>
-
-      {% endif %}
-
-    </section>
   </div>
   {% endif %}
 
+
+  <!-- Overtime -->
+  {% if overtime %}
+  <div
+    id="tab-content-overtime"
+    class="tab-content hidden space-y-6"
+  >
+    {% include "videos/sections/_overtime.html" %}
+  </div>
+  {% endif %}
+
+
+  <!-- Bucket List -->
+  {% if bucket_list %}
+  <div
+    id="tab-content-bucket-list"
+    class="tab-content hidden space-y-6"
+  >
+    {% include "videos/sections/_bucket_list.html" %}
+  </div>
+  {% endif %}
+
+
+  <!-- Stereotypes -->
+  {% if stereotypes %}
+  <div
+    id="tab-content-stereotypes"
+    class="tab-content hidden space-y-6"
+  >
+    {% include "videos/sections/_stereotypes.html" %}
+  </div>
+  {% endif %}
+
+
   <!-- Songs -->
-  <div id="tab-content-songs" class="tab-content hidden space-y-6">
-
-    <section class="space-y-3">
-      <h2 class="text-xl font-medium text-neutral-900">Songs used</h2>
-
-      {% if video.songs %}
-        <ul class="space-y-3">
-          {% for song in video.songs %}
-            <li class="border border-gray-200 rounded p-3 hover:bg-gray-50 transition">
-              <a href="/songs/{{ song.id }}" class="font-semibold hover:text-[#2EFCE6]">
-                {{ song.title }}
-              </a>
-
-              {% if song.artists %}
-                <div class="text-sm text-neutral-600">
-                  {{ song.artists | join(', ') }}
-                </div>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <div class="text-neutral-500 italic bg-gray-50 border rounded p-3">
-          No songs currently linked to this video.
-        </div>
-      {% endif %}
-
-    </section>
-
+  <div
+    id="tab-content-songs"
+    class="tab-content hidden space-y-6"
+  >
+    {% include "videos/sections/_songs.html" %}
   </div>
 
 </section>
 
+
 <script>
 function showTab(name, updateUrl = true) {
+  let content = document.getElementById('tab-content-' + name);
+  let activeTab = document.getElementById('tab-' + name);
+
+  // Fall back to Overview if this video doesn't have the requested tab.
+  if (!content || !activeTab) {
+    name = 'overview';
+    content = document.getElementById('tab-content-overview');
+    activeTab = document.getElementById('tab-overview');
+  }
+
   if (updateUrl) {
     history.replaceState(null, "", "#" + name);
   }
@@ -291,11 +236,10 @@ function showTab(name, updateUrl = true) {
     el.classList.remove('border-[#2EFCE6]');
   });
 
-  document.getElementById('tab-content-' + name)?.classList.remove('hidden');
+  content.classList.remove('hidden');
 
-  const activeTab = document.getElementById('tab-' + name);
-  activeTab?.classList.add('text-[#2EFCE6]');
-  activeTab?.classList.add('border-[#2EFCE6]');
+  activeTab.classList.add('text-[#2EFCE6]');
+  activeTab.classList.add('border-[#2EFCE6]');
 }
 
 window.addEventListener('load', () => {

@@ -444,6 +444,34 @@ def video_detail(video_id):
         stereotypes=queries.get_stereotypes_view(video_id),
     )
 
+@app.route("/battles")
+def battles_page():
+    battles = queries.get_battles()
+
+    return render_template(
+        "battles/index.html",
+        battles=battles,
+    )
+
+
+@app.route("/battles/<int:battle_id>")
+def battle_detail(battle_id):
+    video_id = queries.get_battle_video_id(battle_id)
+
+    if video_id is None:
+        abort(404)
+
+    video = queries.get_video_detail_page(video_id)
+    battle = queries.get_battle_view(video_id)
+
+    if not video or not battle:
+        abort(404)
+
+    return render_template(
+        "battles/detail.html",
+        video=video,
+        battle=battle,
+    )
 
 # =========================
 # API
@@ -488,5 +516,5 @@ if __name__ == "__main__":
     app.run(
         host="127.0.0.1",
         port=8081,
-        debug=True,
+        debug=True
     )

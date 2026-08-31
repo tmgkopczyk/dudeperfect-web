@@ -1,0 +1,58 @@
+<section class="space-y-4">
+
+  <div>
+    <h2 class="text-xl font-medium text-neutral-900">
+      Bucket List
+    </h2>
+
+    <div class="text-sm text-neutral-500">
+      Episode {{ bucket_list.episode_number }}
+      · {{ bucket_list.tasks | length }} tasks
+    </div>
+  </div>
+
+  {% if bucket_list.tasks %}
+
+    <div class="divide-y divide-neutral-200 border-y border-neutral-200">
+
+      {% for task in bucket_list.tasks %}
+      <div class="flex gap-4 py-4">
+
+        <div class="w-8 shrink-0 text-right text-sm font-medium text-neutral-400">
+          {{ task.task_order }}.
+        </div>
+
+        <div class="min-w-0 flex-1">
+
+          <div class="font-semibold text-neutral-900">
+            {{ task.task_text }}
+          </div>
+
+          {% if task.completed %}
+            <div class="mt-1 text-sm font-medium text-green-700">
+              ✓ Completed
+            </div>
+          {% endif %}
+
+          {% if task.completion_note %}
+            <div class="mt-1 text-sm text-neutral-500">
+              {{ task.completion_note }}
+            </div>
+          {% endif %}
+
+        </div>
+
+      </div>
+      {% endfor %}
+
+    </div>
+
+  {% else %}
+
+    <div class="text-neutral-500 italic bg-gray-50 border rounded p-3">
+      Bucket List tasks have not been added for this episode yet.
+    </div>
+
+  {% endif %}
+
+</section>

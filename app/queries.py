@@ -61,6 +61,7 @@ def get_battle_view(video_id: int):
                         SELECT
                             p.id AS player_id,
                             p.name,
+                            p.slug,
                             bp.is_guest,
                             bp.notes
                         FROM battle_team_members btm
@@ -90,7 +91,9 @@ def get_battle_view(video_id: int):
                     SELECT
                         p.id AS player_id,
                         p.name,
+                        p.slug,
                         bp.is_guest,
+                        bp.accent_color,
                         bp.notes
                     FROM battle_players bp
                     JOIN players p
@@ -279,6 +282,41 @@ def get_battle_view(video_id: int):
         "timeline": timeline,
         "final_standings": [dict(x) for x in final_standings]
     }
+
+def get_battles():
+    sql = text("""
+        SELECT
+            b.id AS battle_id,
+            b.video_id,
+            b.winner,
+            b.description,
+            v.title,
+            v.published_at,
+            v.youtube_video_id
+        FROM battles b
+        JOIN videos v
+          ON v.id = b.video_id
+        ORDER BY v.published_at DESC, b.id DESC
+    """)
+
+    with engine.connect() as conn:
+        return [
+            dict(row)
+            for row in conn.execute(sql).mappings()
+        ]
+
+def get_battle_video_id(battle_id: int):
+    sql = text("""
+        SELECT video_id
+        FROM battles
+        WHERE id = :battle_id
+    """)
+
+    with engine.connect() as conn:
+        return conn.execute(
+            sql,
+            {"battle_id": battle_id},
+        ).scalar_one_or_none()
 
 def get_overtime_view(video_id: int):
     with engine.connect() as conn:
@@ -1436,7 +1474,7 @@ def get_song_detail(song_id: int):
         s.source_url       AS source_url,
         s.notes            AS notes,
 
-        a.name             AS artist_name,
+        a.name             AS artist_name
         sa.artist_order    AS artist_order,
 
         v.id               AS video_id,
@@ -1845,7 +1883,8 @@ def get_video_detail_page(video_id: int):
             s.title             AS song_title,
             s.spotify_track_id  AS spotify_track_id,
 
-            a.name              AS artist_name
+            a.name              AS artist_name,
+            a.id                AS artist_id
             FROM videos v
             LEFT JOIN video_songs vs  ON vs.video_id = v.id
             LEFT JOIN songs s         ON s.id = vs.song_id
@@ -1887,7 +1926,10 @@ def get_video_detail_page(video_id: int):
         )
 
         if row["artist_name"]:
-            song["artists"].append(row["artist_name"])
+            song["artists"].append({
+                "id": row["artist_id"],
+                "name": row["artist_name"],
+            })
 
     video["songs"] = list(video["songs"].values())
     return video

@@ -1,0 +1,49 @@
+<section class="space-y-3">
+
+  <h2 class="text-xl font-medium text-neutral-900">
+    Songs used
+  </h2>
+
+  {% if video.songs %}
+
+    <ul class="space-y-3">
+
+      {% for song in video.songs %}
+        <li class="border border-gray-200 rounded p-3 hover:bg-gray-50 transition">
+
+          <a
+            href="{{ url_for('song_detail', song_id=song.id) }}"
+            class="font-semibold hover:text-[#2EFCE6]"
+          >
+            {{ song.title }}
+          </a>
+
+          {% if song.artists %}
+            <div class="text-sm text-neutral-600">
+
+              {% for artist in song.artists %}
+                <a
+                  href="{{ url_for('artist_detail', artist_id=artist.id) }}"
+                  class="hover:text-[#2EFCE6] hover:underline"
+                >
+                  {{ artist.name }}
+                </a>{% if not loop.last %}, {% endif %}
+              {% endfor %}
+
+            </div>
+          {% endif %}
+
+        </li>
+      {% endfor %}
+
+    </ul>
+
+  {% else %}
+
+    <div class="text-neutral-500 italic bg-gray-50 border rounded p-3">
+      No songs currently linked to this video.
+    </div>
+
+  {% endif %}
+
+</section>
