@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Response
+from flask import Response
 from sqlalchemy import text
-from .db import engine
-from .queries import list_video_categories
 
-router = APIRouter(include_in_schema=False)
+from db import engine
+from queries import list_video_categories
+
 
 BASE_URL = "https://dudeperfectfanarchive.com"
 
 
-@router.get("/sitemap.xml")
 def sitemap():
     urls: list[str] = []
 
@@ -25,8 +24,11 @@ def sitemap():
 
     # --- Category pages (DB-backed slugs) ---
     categories = list_video_categories()
+
     for cat in categories:
-        urls.append(f"{BASE_URL}/videos/categories/{cat['slug']}")
+        urls.append(
+            f"{BASE_URL}/videos/categories/{cat['slug']}"
+        )
 
     with engine.connect() as conn:
         # --- Videos ---
@@ -40,7 +42,7 @@ def sitemap():
         # --- Artists ---
         for row in conn.execute(text("SELECT id FROM artists")):
             urls.append(f"{BASE_URL}/artists/{row.id}")
-    
+
         # --- Players ---
         for row in conn.execute(text("""
             SELECT slug
@@ -50,8 +52,8 @@ def sitemap():
             urls.append(f"{BASE_URL}/player/{row.slug}")
 
     return Response(
-        content=render_sitemap(urls),
-        media_type="application/xml"
+        render_sitemap(urls),
+        mimetype="application/xml",
     )
 
 
@@ -67,4 +69,5 @@ def render_sitemap(urls: list[str]) -> str:
         lines.append("  </url>")
 
     lines.append("</urlset>")
+
     return "\n".join(lines)

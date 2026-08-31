@@ -1,6 +1,11 @@
 import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import URL
+
+load_dotenv()
 
 DATABASE_URL = (
     f"postgresql+psycopg://{os.environ['DB_USER']}:"

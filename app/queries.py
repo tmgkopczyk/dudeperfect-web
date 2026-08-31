@@ -1,6 +1,6 @@
 from collections import defaultdict, Counter
 from sqlalchemy import text
-from .db import engine
+from db import engine
 
 def get_battle_view(video_id: int):
     with engine.connect() as conn:

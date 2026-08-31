@@ -1,11 +1,5 @@
-fastapi==0.110.0
-starlette==0.36.3
-jinja2==3.1.2
-uvicorn[standard]==0.27.1
-
+Flask
 requests
-python-multipart
 sqlalchemy
 psycopg[binary]
-
-itsdangerous
+python-dotenv

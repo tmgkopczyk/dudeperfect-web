@@ -63,7 +63,7 @@
 
         {% if video.published_at %}
         <div class="text-xs text-gray-500">
-          {{ video.published_at.strftime("%B %-d, %Y") }}
+          {{ video.published_at.strftime("%B") }} {{ video.published_at.day }}, {{ video.published_at.year }}
         </div>
         {% endif %}
       </div>
@@ -128,7 +128,7 @@
 
           {% if video.published_at %}
           <div class="text-xs text-gray-500">
-            {{ video.published_at.strftime("%B %-d, %Y") }}
+            {{ video.published_at.strftime("%B") }} {{ video.published_at.day }}, {{ video.published_at.year }}
           </div>
           {% endif %}
         </div>
