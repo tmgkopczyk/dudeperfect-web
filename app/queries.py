@@ -138,6 +138,9 @@ def get_battle_view(video_id: int):
             results = conn.execute(
                 text("""
                     SELECT
+                        p.id AS player_id,
+                        p.slug AS player_slug,
+                        bt.id AS team_id,
                         COALESCE(p.name, bt.name) AS name,
                         brp.status,
                         brp.placement,
@@ -184,6 +187,9 @@ def get_battle_view(video_id: int):
                     participants = conn.execute(
                         text("""
                             SELECT
+                                p.id AS player_id,
+                                p.slug AS player_slug,
+                                bt.id AS team_id,
                                 COALESCE(p.name, bt.name) AS name,
                                 brmp.placement,
                                 brmp.score,

@@ -39,7 +39,16 @@
                 🏆
               {% endif %}
 
-              {{ participant.name }}
+              {% if participant.player_slug %}
+                <a
+                  href="{{ url_for('player_page', slug=participant.player_slug) }}"
+                  class="hover:text-[#2EFCE6] hover:underline"
+                >
+                  {{ participant.name }}
+                </a>
+              {% else %}
+                {{ participant.name }}
+              {% endif %}
 
             </div>
 
