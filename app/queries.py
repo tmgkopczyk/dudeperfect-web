@@ -1504,7 +1504,7 @@ def get_song_detail(song_id: int):
         s.source_url       AS source_url,
         s.notes            AS notes,
 
-        a.name             AS artist_name
+        a.name             AS artist_name,
         sa.artist_order    AS artist_order,
 
         v.id               AS video_id,
