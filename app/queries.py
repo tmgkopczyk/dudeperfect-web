@@ -15,7 +15,6 @@ def get_battle_view(video_id: int):
                     b.description,
                     b.rules,
                     b.notes,
-                    b.winner,
                     v.id AS video_id,
                     v.title
                 FROM battles b
@@ -237,34 +236,65 @@ def get_battle_view(video_id: int):
         # 4️⃣ Final standings
         # =========================
 
-        final_standings = []
+        final_standings = conn.execute(
+            text("""
+                SELECT
+                    br.player_id,
+                    br.battle_team_id,
+                    COALESCE(p.name, bt.name) AS name,
+                    br.status,
+                    br.placement,
+                    br.score,
+                    br.notes
+                FROM battle_results br
+                LEFT JOIN players p
+                    ON p.id = br.player_id
+                LEFT JOIN battle_teams bt
+                    ON bt.id = br.battle_team_id
+                WHERE br.battle_id = :battle_id
+                ORDER BY
+                    br.placement NULLS LAST,
+                    COALESCE(p.name, bt.name)
+            """),
+            {"battle_id": battle_row["battle_id"]}
+        ).mappings().all()
 
-        if rounds:
+        winner_parts = []
 
-            final_round_id = rounds[-1]["id"]
+        for result in final_standings:
 
-            final_standings = conn.execute(
-                text("""
-                    SELECT
-                        COALESCE(p.name, bt.name) AS name,
-                        brp.status,
-                        brp.placement,
-                        brp.score,
-                        brp.notes
-                    FROM battle_round_participants brp
-                    LEFT JOIN battle_players bp
-                        ON brp.battle_player_id = bp.id
-                    LEFT JOIN players p
-                        ON p.id = bp.player_id
-                    LEFT JOIN battle_teams bt
-                        ON bt.id = brp.battle_team_id
-                    WHERE brp.battle_round_id = :round_id
-                    ORDER BY
-                        brp.placement NULLS LAST,
-                        COALESCE(p.name, bt.name)
-                """),
-                {"round_id": final_round_id}
-            ).mappings().all()
+            if result["placement"] != 1:
+                continue
+
+            # Individual winner
+            if result["player_id"] is not None:
+                winner_parts.append(result["name"])
+
+            # Team winner
+            elif result["battle_team_id"] is not None:
+
+                members = conn.execute(
+                    text("""
+                        SELECT p.name
+                        FROM battle_team_members btm
+                        JOIN battle_players bp
+                            ON bp.id = btm.battle_player_id
+                        JOIN players p
+                            ON p.id = bp.player_id
+                        WHERE btm.team_id = :team_id
+                        ORDER BY btm.id
+                    """),
+                    {"team_id": result["battle_team_id"]}
+                ).scalars().all()
+
+                team_name = result["name"]
+
+                if members:
+                    team_name += f" ({', '.join(members)})"
+
+                winner_parts.append(team_name)
+
+        winner = ", ".join(winner_parts) if winner_parts else None
 
     # =========================
     # 5️⃣ Shape data for template
@@ -273,7 +303,7 @@ def get_battle_view(video_id: int):
     return {
         "id": battle_row["battle_id"],
         "title": battle_row["title"],
-        "winner": battle_row["winner"],
+        "winner": winner,
         "format": "standard",
         "description": battle_row["description"],
         "rules": battle_row["rules"],
@@ -2135,59 +2165,44 @@ def get_player_by_slug(slug: str):
                 FROM battle_players bp
                 WHERE bp.player_id = p.id
             ) AS total_battles,
-
+            
             (
-                SELECT COUNT(DISTINCT b.id)
-                FROM battles b
-
-                LEFT JOIN battle_teams bt
-                    ON bt.battle_id = b.id
-                   AND b.winner ILIKE '%' || bt.name || '%'
-
-                LEFT JOIN battle_team_members btm
-                    ON btm.team_id = bt.id
-
-                LEFT JOIN battle_players bp
-                    ON bp.id = btm.battle_player_id
-
-                WHERE
-                    (
-                        bp.player_id = p.id
-                    )
-                    OR
-                    (
-                        bt.id IS NULL
-                        AND b.winner ILIKE '%' || p.name || '%'
-                    )
+                SELECT COUNT(DISTINCT br.battle_id)
+                FROM battle_results br
+                WHERE br.placement = 1
+                  AND (
+                      br.player_id = p.id
+                      OR EXISTS (
+                          SELECT 1
+                          FROM battle_team_members btm
+                          JOIN battle_players winner_bp
+                              ON winner_bp.id = btm.battle_player_id
+                          WHERE btm.team_id = br.battle_team_id
+                            AND winner_bp.player_id = p.id
+                      )
+                  )
             ) AS total_wins,
-
+            
             ROUND(
                 (
                     (
-                        SELECT COUNT(DISTINCT b.id)
-                        FROM battles b
-
-                        LEFT JOIN battle_teams bt
-                            ON bt.battle_id = b.id
-                           AND b.winner ILIKE '%' || bt.name || '%'
-
-                        LEFT JOIN battle_team_members btm
-                            ON btm.team_id = bt.id
-
-                        LEFT JOIN battle_players bp
-                            ON bp.id = btm.battle_player_id
-
-                        WHERE
-                            (
-                                bp.player_id = p.id
-                            )
-                            OR
-                            (
-                                bt.id IS NULL
-                                AND b.winner ILIKE '%' || p.name || '%'
-                            )
+                        SELECT COUNT(DISTINCT br.battle_id)
+                        FROM battle_results br
+                        WHERE br.placement = 1
+                          AND (
+                              br.player_id = p.id
+                              OR EXISTS (
+                                  SELECT 1
+                                  FROM battle_team_members btm
+                                  JOIN battle_players winner_bp
+                                      ON winner_bp.id = btm.battle_player_id
+                                  WHERE btm.team_id = br.battle_team_id
+                                    AND winner_bp.player_id = p.id
+                              )
+                          )
                     ) * 100.0
-                ) /
+                )
+                /
                 NULLIF(
                     (
                         SELECT COUNT(DISTINCT bp.battle_id)
