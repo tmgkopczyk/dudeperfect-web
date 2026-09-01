@@ -43,7 +43,12 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {% for team in battle.teams %}
-        <div class="border rounded-lg bg-white p-4 space-y-3 border-t-4" style="border-top: 6px solid {{ team.accent_color }};" >
+        <div
+            class="border rounded-lg bg-white p-4 space-y-3"
+            {% if team.accent_color %}
+                style="border-top: 6px solid {{ '#D1D5DB' if team.accent_color|lower == '#ffffff' else team.accent_color }};"
+            {% endif %}
+        >
             <h4 class="font-semibold text-neutral-800">
             {{ team.name }}
             </h4>
