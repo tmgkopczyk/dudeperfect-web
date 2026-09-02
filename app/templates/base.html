@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Dude Perfect Fan Archive{% endblock %}</title>
-  <meta name="description" content="{% block description %}Explore songs, artists, and videos used in Dude Perfect content.{% endblock %}">
+  <meta name="description" content="{% block description %}Explore videos, battles, players, stereotypes, music, and more from Dude Perfect.{% endblock %}">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -18,16 +18,7 @@
       <a href="/" class="font-semibold text-[#2EFCE6] hover:text-[#22D3C5]">Dude Perfect Fan Archive</a>
 
       <!-- Nav links -->
-      <nav class="ml-auto flex items-center gap-4 sm:gap-6 text-sm sm:text-base">
-
-        <!-- Songs -->
-        <a href="/songs" class="hover:text-[#2EFCE6]">Songs</a>
-
-        <a href="/battles" class="hover:text-[#2EFCE6]">Battles</a>
-
-        <!-- Artists -->
-        <a href="/artists" class="hover:text-[#2EFCE6]">Artists</a>
-
+      <nav class="ml-auto hidden lg:flex items-center gap-6 text-base">
         <!-- Videos -->
         <div class="relative group">
           <a href="/videos" class="flex items-center gap-1 hover:text-[#2EFCE6]">
@@ -43,6 +34,17 @@
             </div>
           </div>
         </div>
+
+        <a href="/battles" class="hover:text-[#2EFCE6]">Battles</a>
+
+        <!-- Players -->
+        <a href="/players" class="hover:text-[#2EFCE6]">Players</a>
+
+        <!-- Songs -->
+        <a href="/songs" class="hover:text-[#2EFCE6]">Songs</a>
+
+        <!-- Artists -->
+        <a href="/artists" class="hover:text-[#2EFCE6]">Artists</a>
 
         <!-- Stereotypes -->
         <div class="relative group">
@@ -60,9 +62,10 @@
             </div>
           </div>
         </div>
-
-        <!-- Players -->
-        <a href="/players" class="hover:text-[#2EFCE6]">Players</a>
+        <!-- Search -->
+        <a href="{{ url_for('search_home') }}" class="hover:text-[#2EFCE6]">
+          Search
+        </a>
 
         <!-- Forums -->
         <a href="https://forums.dudeperfectfanarchive.com" class="hover:text-[#2EFCE6]">Forums</a>
@@ -71,8 +74,110 @@
         <a href="/contact" class="text-gray-400 hover:text-[#2EFCE6]">Contact</a>
 
       </nav>
+      <button
+        id="mobile-menu-button"
+        type="button"
+        class="ml-auto lg:hidden px-3 py-2 border border-neutral-600 rounded hover:border-[#2EFCE6] hover:text-[#2EFCE6]"
+        aria-label="Open navigation"
+        aria-expanded="false"
+      >
+        ☰
+      </button>
 
     </div>
+    <!-- Mobile navigation -->
+    <nav
+      id="mobile-menu"
+      class="hidden lg:hidden border-t border-neutral-700 px-4 py-4"
+    >
+      <div class="flex flex-col gap-4">
+        <div>
+          <a
+            href="{{ url_for('videos_page') }}"
+            class="font-medium hover:text-[#2EFCE6]"
+          >
+            Videos
+          </a>
+
+          <div class="mt-2 ml-4 flex flex-col gap-2 text-sm text-gray-400">
+            <a
+              href="{{ url_for('videos_page') }}"
+              class="hover:text-[#2EFCE6]"
+            >
+              All Videos
+            </a>
+
+            <a
+              href="{{ url_for('categories_page') }}"
+              class="hover:text-[#2EFCE6]"
+            >
+              Video Categories
+            </a>
+          </div>
+        </div>
+
+        <a href="{{ url_for('battles_page') }}" class="hover:text-[#2EFCE6]">
+          Battles
+        </a>
+
+        <a href="{{ url_for('players_index') }}" class="hover:text-[#2EFCE6]">
+          Players
+        </a>
+
+        <a href="{{ url_for('songs_page') }}" class="hover:text-[#2EFCE6]">
+          Songs
+        </a>
+
+        <a href="{{ url_for('artists_page') }}" class="hover:text-[#2EFCE6]">
+          Artists
+        </a>
+
+        <div>
+          <a
+            href="{{ url_for('stereotypes_landing_page') }}"
+            class="font-medium hover:text-[#2EFCE6]"
+          >
+            Stereotypes
+          </a>
+
+          <div class="mt-2 ml-4 flex flex-col gap-2 text-sm text-gray-400">
+            <a
+              href="{{ url_for('stereotypes_landing_page') }}"
+              class="hover:text-[#2EFCE6]"
+            >
+              Episodes
+            </a>
+
+            <a
+              href="{{ url_for('recurring_stereotypes_page') }}"
+              class="hover:text-[#2EFCE6]"
+            >
+              Recurring Stereotypes
+            </a>
+
+            <a
+              href="{{ url_for('stereotype_performers_page') }}"
+              class="hover:text-[#2EFCE6]"
+            >
+              Performers
+            </a>
+          </div>
+        </div>
+
+        <a href="{{ url_for('search_home') }}" class="hover:text-[#2EFCE6]">
+          Search
+        </a>
+
+        <a href="https://forums.dudeperfectfanarchive.com" class="hover:text-[#2EFCE6]">
+          Forums
+        </a>
+
+        <a href="{{ url_for('contact_page') }}" class="text-gray-400 hover:text-[#2EFCE6]">
+          Contact
+        </a>
+
+      </div>
+    </nav>
   </header>
 
   <!-- Main content -->
@@ -95,6 +200,20 @@
       </p>
     </div>
   </footer>
+<script>
+  const mobileMenuButton = document.getElementById('mobile-menu-button');
+  const mobileMenu = document.getElementById('mobile-menu');
 
+  mobileMenuButton.addEventListener('click', () => {
+    const isOpen = !mobileMenu.classList.contains('hidden');
+
+    mobileMenu.classList.toggle('hidden');
+
+    mobileMenuButton.setAttribute(
+      'aria-expanded',
+      String(!isOpen)
+    );
+  });
+</script>
 </body>
 </html>

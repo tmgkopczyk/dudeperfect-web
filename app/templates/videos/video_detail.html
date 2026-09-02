@@ -243,8 +243,21 @@ function showTab(name, updateUrl = true) {
 }
 
 window.addEventListener('load', () => {
-  const tab = location.hash.replace('#', '') || 'overview';
-  showTab(tab, false);
+  const hash = location.hash.replace('#', '');
+
+  if (hash.startsWith('stereotype-')) {
+    showTab('stereotypes', false);
+
+    const target = document.getElementById(hash);
+
+    if (target) {
+      target.scrollIntoView();
+    }
+
+    return;
+  }
+
+  showTab(hash || 'overview', false);
 });
 </script>
 

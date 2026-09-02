@@ -1564,7 +1564,7 @@ def get_song_detail(song_id: int):
 
 def search_songs(query: str, limit: int = 50):
     sql = text("""
-        SELECT
+    SELECT
      s.id,
        s.title,
        s.spotify_track_id,
@@ -1877,6 +1877,110 @@ def search_videos(query: str, limit: int = 50):
         for row in rows
     ]
 
+def search_battles(query: str, limit: int = 50):
+    sql = text("""
+        SELECT
+            b.id AS battle_id,
+            b.video_id,
+            v.title,
+            v.youtube_video_id,
+            v.published_at,
+            b.description
+        FROM battles b
+        JOIN videos v
+            ON v.id = b.video_id
+        WHERE
+            unaccent(lower(v.title))
+                LIKE unaccent(lower(:q))
+            OR unaccent(lower(COALESCE(b.description, '')))
+                LIKE unaccent(lower(:q))
+        ORDER BY v.published_at DESC
+        LIMIT :limit;
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sql,
+            {
+                "q": f"%{query}%",
+                "limit": limit,
+            }
+        ).mappings().all()
+
+    return [dict(row) for row in rows]
+
+def search_players(query: str, limit: int = 50):
+    sql = text("""
+        SELECT id, name, slug
+        FROM players
+        WHERE unaccent(lower(name))
+              LIKE unaccent(lower(:q))
+        ORDER BY name
+        LIMIT :limit;
+    """)
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sql,
+            {
+                "q":f"%{query}%",
+                "limit":limit
+            }
+        ).mappings().all()
+    #print(rows)
+    return [dict(row) for row in rows]
+
+def search_stereotype_segments(query: str, limit: int = 50):
+    sql = text("""
+        SELECT
+            ss.id AS segment_id,
+            ss.name,
+            ss.segment_order,
+            se.id AS episode_id,
+            se.episode_number,
+            se.theme,
+            se.video_id
+        FROM stereotype_segments ss
+        JOIN stereotypes_episodes se
+            ON se.id = ss.episode_id
+        WHERE unaccent(lower(ss.name))
+                LIKE unaccent(lower(:q))
+        ORDER BY se.episode_number DESC, ss.segment_order
+        LIMIT :limit;
+    """)
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sql,
+            {
+                "q":f"%{query}%",
+                "limit":limit
+            }
+        ).mappings().all()
+    #print(rows)
+    return [dict(row) for row in rows]
+
+def search_recurring_stereotypes(query: str, limit: int = 50):
+    sql = text("""
+        SELECT
+            rs.id,
+            rs.name,
+            rs.description
+        FROM recurring_stereotypes rs
+        WHERE unaccent(lower(rs.name))
+              LIKE unaccent(lower(:q))
+        ORDER BY rs.name
+        LIMIT :limit;
+    """)
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sql,
+            {
+                "q":f"%{query}%",
+                "limit":limit
+            }
+        ).mappings().all()
+    return [dict(row) for row in rows]
+
+
 def get_video_detail(video_id: int):
     sql = text("""
         SELECT
@@ -2056,34 +2160,6 @@ def get_video_category_by_slug(slug: str):
     with engine.connect() as conn:
         return conn.execute(sql, {"slug": slug}).mappings().first()
 
-def search_videos(query: str, limit: int = 50):
-    sql = text("""
-        SELECT
-            v.id,
-            v.title,
-            v.published_at,
-            COUNT(vs.song_id) AS song_count
-        FROM videos v
-        LEFT JOIN video_songs vs
-            ON vs.video_id = v.id
-        WHERE unaccent(lower(v.title))
-              LIKE unaccent(lower(:q))
-        GROUP BY v.id
-        ORDER BY v.published_at DESC
-        LIMIT :limit
-    """)
-
-    with engine.connect() as conn:
-        rows = conn.execute(
-            sql,
-            {
-                "q": f"%{query}%",
-                "limit": limit
-            }
-        ).mappings().all()
-
-    return [dict(row) for row in rows]
-
 def get_videos(limit: int = 50, offset: int = 0):
     sql = text("""
         SELECT
@@ -2236,6 +2312,55 @@ def get_player_by_slug(slug: str):
 
     return dict(row)
 
+def get_recent_battles_for_player(player_id: int, limit: int = 10):
+    sql = text("""
+        SELECT DISTINCT
+            b.id AS battle_id,
+            b.video_id,
+            v.title,
+            v.published_at,
+            bp.accent_color,
+
+            EXISTS (
+                SELECT 1
+                FROM battle_results br
+                WHERE br.battle_id = b.id
+                  AND br.placement = 1
+                  AND (
+                      br.player_id = :player_id
+                      OR EXISTS (
+                          SELECT 1
+                          FROM battle_team_members btm
+                          JOIN battle_players winner_bp
+                              ON winner_bp.id = btm.battle_player_id
+                          WHERE btm.team_id = br.battle_team_id
+                            AND winner_bp.player_id = :player_id
+                      )
+                  )
+            ) AS won
+
+        FROM battle_players bp
+        JOIN battles b
+            ON b.id = bp.battle_id
+        JOIN videos v
+            ON v.id = b.video_id
+        WHERE bp.player_id = :player_id
+        ORDER BY v.published_at DESC
+        LIMIT :limit
+    """)
+
+    with engine.connect() as conn:
+        return [
+            dict(row)
+            for row in conn.execute(
+                sql,
+                {
+                    "player_id": player_id,
+                    "limit": limit,
+                }
+            ).mappings()
+        ]
+
 def list_players():
     sql = text("""
         SELECT
@@ -2255,6 +2380,47 @@ def list_players():
         rows = conn.execute(sql).mappings().all()
 
     return [dict(r) for r in rows]
+
+
+def get_stereotype_appearances_for_player(player_id: int, limit: int = 10):
+    sql = text("""
+        SELECT
+            ss.id AS segment_id,
+            ss.segment_order,
+            ss.name,
+            se.episode_number,
+            se.theme,
+            se.video_id,
+            v.title,
+            v.published_at
+        FROM stereotype_segments ss
+        JOIN stereotypes_episodes se
+            ON ss.episode_id = se.id
+        JOIN videos v
+            ON v.id = se.video_id
+        WHERE
+            ss.performer_id = :player_id
+            OR EXISTS (
+                SELECT 1
+                FROM stereotype_segment_performers ssp
+                WHERE ssp.segment_id = ss.id
+                  AND ssp.player_id = :player_id
+            )
+        ORDER BY v.published_at DESC, ss.segment_order
+        LIMIT :limit;
+    """)
+    with engine.connect() as conn:
+        return [
+            dict(row)
+            for row in conn.execute(
+                sql,
+                {
+                    "player_id": player_id,
+                    "limit": limit,
+                }
+            ).mappings()
+        ]
+
 
 def get_video_id_by_youtube_id(youtube_video_id: str):
     with engine.connect() as conn:

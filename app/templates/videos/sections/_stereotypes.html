@@ -16,8 +16,7 @@
     <div class="divide-y divide-neutral-200 border-y border-neutral-200">
 
       {% for segment in stereotypes.segments %}
-      <div class="py-4 flex gap-4">
-
+      <div class="py-4 flex gap-4" id="stereotype-{{segment.id}}">
         <div class="w-8 shrink-0 text-right text-sm font-medium text-neutral-400">
           {{ segment.segment_order }}.
         </div>

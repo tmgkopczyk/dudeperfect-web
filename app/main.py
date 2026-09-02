@@ -102,7 +102,25 @@ def home():
 
 @app.route("/search")
 def search_home():
-    return render_template("search/index.html")
+    q = request.args.get("q", "").strip()
+
+    results = None
+
+    if q:
+        results = {
+            "videos": queries.search_videos(q, limit=10),
+            "battles": queries.search_battles(q, limit=10),
+            "songs": queries.search_songs(q, limit=10),
+            "artists": queries.search_artists(q, limit=10),
+            "players": queries.search_players(q,limit=10),
+            "stereotypes": queries.search_stereotype_segments(q,limit=10),
+            "recurring_stereotypes": queries.search_recurring_stereotypes(q,limit=10)
+        }
+    return render_template(
+        "search/index.html",
+        query=q,
+        results=results,
+    )
 
 
 # =========================
@@ -321,10 +339,18 @@ def player_page(slug):
     if not player:
         abort(404)
 
+    recent_battles = queries.get_recent_battles_for_player(
+        player["id"]
+    )
+    stereotype_appearances = queries.get_stereotype_appearances_for_player(
+        player["id"]
+    )
+
     return render_template(
         "players/player_detail.html",
         player=player,
-        recent_battles=[],
+        recent_battles=recent_battles,
+        recent_stereotype_appearances=stereotype_appearances
     )
 
 

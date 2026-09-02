@@ -2,22 +2,300 @@
 {% block title %}Search{% endblock %}
 
 {% block content %}
+
 <h1 class="text-2xl font-semibold mb-6">Search</h1>
 
-<div class="space-y-4">
-  <a href="/songs" class="block border rounded p-4 hover:border-[#2EFCE6]">
-    <h2 class="font-semibold">Songs</h2>
-    <p class="text-sm text-gray-600">Search by song title</p>
-  </a>
+<form method="get" action="{{ url_for('search_home') }}" class="mb-8">
+    <div class="flex gap-2">
+        <input
+            type="search"
+            name="q"
+            value="{{ query or '' }}"
+            placeholder="Search the archive..."
+            class="flex-1 border rounded px-4 py-3"
+        >
 
-  <a href="/artists" class="block border rounded p-4 hover:border-[#2EFCE6]">
-    <h2 class="font-semibold">Artists</h2>
-    <p class="text-sm text-gray-600">Search by artist name</p>
-  </a>
+        <button
+            type="submit"
+            class="bg-neutral-900 text-white px-6 py-3 rounded"
+        >
+            Search
+        </button>
+    </div>
+</form>
 
-  <a href="/videos" class="block border rounded p-4 hover:border-[#2EFCE6]">
-    <h2 class="font-semibold">Videos</h2>
-    <p class="text-sm text-gray-600">Search by video title</p>
-  </a>
-</div>
+
+    {% if query %}
+
+    <p class="text-gray-600 mb-6">
+        Results for "{{ query }}"
+    </p>
+
+
+    {# VIDEOS #}
+
+    <h2 class="text-xl font-semibold mb-3">Videos</h2>
+
+    {% if results.videos %}
+        <div class="border rounded divide-y mb-8">
+
+            {% for video in results.videos %}
+                <a
+                    href="{{ url_for('video_detail', video_id=video.id) }}"
+                    class="block p-4 hover:bg-gray-50"
+                >
+                    <div class="font-semibold">
+                        {{ video.title }}
+                    </div>
+
+                    {% if video.published_at %}
+                        <div class="text-sm text-gray-600 mt-1">
+                            {{ video.published_at.strftime('%B %d, %Y').replace(' 0', ' ') }}
+                        </div>
+                    {% endif %}
+                </a>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <p class="text-gray-500 mb-8">No videos found.</p>
+    {% endif %}
+
+
+    {# BATTLES #}
+
+    <h2 class="text-xl font-semibold mb-3">Battles</h2>
+
+    {% if results.battles %}
+        <div class="border rounded divide-y mb-8">
+
+            {% for battle in results.battles %}
+                <a
+                    href="{{ url_for('battle_detail', battle_id=battle.battle_id) }}"
+                    class="block p-4 hover:bg-gray-50"
+                >
+                    <div class="font-semibold">
+                        {{ battle.title }}
+                    </div>
+
+                    {% if battle.published_at %}
+                        <div class="text-sm text-gray-600 mt-1">
+                            {{ battle.published_at.strftime('%B %d, %Y').replace(' 0', ' ') }}
+                        </div>
+                    {% endif %}
+
+                    {% if battle.description %}
+                        <div class="text-sm text-gray-600 mt-1">
+                            {{ battle.description }}
+                        </div>
+                    {% endif %}
+                </a>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <p class="text-gray-500 mb-8">No battles found.</p>
+    {% endif %}
+
+    {# SONGS #}
+
+    <h2 class="text-xl font-semibold mb-3">Songs</h2>
+
+    {% if results.songs %}
+        <div class="border rounded divide-y mb-8">
+
+            {% for song in results.songs %}
+                <a
+                    href="{{ url_for('song_detail', song_id=song.id) }}"
+                    class="block p-4 hover:bg-gray-50"
+                >
+                    <div class="font-semibold">
+                        {{ song.title }}
+                    </div>
+
+                    {% if song.artists %}
+                        <div class="text-sm text-gray-600 mt-1">
+                            {{ song.artists|join(', ') }}
+                        </div>
+                    {% endif %}
+                </a>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <p class="text-gray-500 mb-8">No songs found.</p>
+    {% endif %}
+
+
+    {# ARTISTS #}
+
+    <h2 class="text-xl font-semibold mb-3">Artists</h2>
+
+    {% if results.artists %}
+        <div class="border rounded divide-y mb-8">
+
+            {% for artist in results.artists %}
+                <a
+                    href="{{ url_for('artist_detail', artist_id=artist.id) }}"
+                    class="block p-4 hover:bg-gray-50"
+                >
+                    <div class="font-semibold">
+                        {{ artist.name }}
+                    </div>
+
+                    <div class="text-sm text-gray-600 mt-1">
+                        {{ artist.song_count }}
+                        song{% if artist.song_count != 1 %}s{% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <p class="text-gray-500 mb-8">No artists found.</p>
+    {% endif %}
+
+    {# PLAYERS #}
+
+    <h2 class="text-xl font-semibold mb-3">Players</h2>
+
+    {% if results.players %}
+        <div class="border rounded divide-y mb-8">
+
+            {% for player in results.players %}
+
+                {% if player.slug %}
+                    <a
+                        href="{{ url_for('player_page', slug=player.slug) }}"
+                        class="block p-4 hover:bg-gray-50"
+                    >
+                        <div class="font-semibold">
+                            {{ player.name }}
+                        </div>
+                    </a>
+                {% else %}
+                    <div class="p-4">
+                        <div class="font-semibold">
+                            {{ player.name }}
+                        </div>
+                    </div>
+                {% endif %}
+
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <p class="text-gray-500 mb-8">No players found.</p>
+    {% endif %}
+    {# STEREOTYPES #}
+
+    <h2 class="text-xl font-semibold mb-3">Stereotypes</h2>
+
+    {% if results.stereotypes %}
+        <div class="border rounded divide-y mb-8">
+
+            {% for stereotype in results.stereotypes %}
+            <a
+                href="{{ url_for('video_detail', video_id=stereotype.video_id) }}#stereotype-{{ stereotype.segment_id }}"
+                class="block p-4 hover:bg-gray-50"
+            >
+                <div class="font-semibold">
+                    {{ stereotype.name }}
+                </div>
+
+                <div class="text-sm text-gray-600 mt-1">
+                    {{ stereotype.theme }} Stereotypes
+                    • Segment {{ stereotype.segment_order }}
+                </div>
+            </a>
+        {% endfor %}
+
+        </div>
+    {% else %}
+        <p class="text-gray-500 mb-8">No stereotypes found.</p>
+    {% endif %}
+
+    <h2 class="text-xl font-semibold mb-3">Recurring Stereotypes</h2>
+
+    {% if results.recurring_stereotypes %}
+        <div class="border rounded divide-y mb-8">
+
+            {% for recurring in results.recurring_stereotypes %}
+                <a
+                    href="{{ url_for('recurring_stereotype_detail', recurring_id=recurring.id) }}"
+                    class="block p-4 hover:bg-gray-50"
+                >
+                    <div class="font-semibold">
+                        {{ recurring.name }}
+                    </div>
+
+                    {% if recurring.description %}
+                        <div class="text-sm text-gray-600 mt-1">
+                            {{ recurring.description }}
+                        </div>
+                    {% endif %}
+                </a>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <p class="text-gray-500 mb-8">No recurring stereotypes found.</p>
+    {% endif %}
+
+    {% else %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+
+        <a href="{{ url_for('videos_page') }}"
+           class="block border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition">
+            <h2 class="font-semibold text-lg">Videos</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                Search by video title
+            </p>
+        </a>
+
+        <a href="{{ url_for('battles_page') }}"
+           class="block border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition">
+            <h2 class="font-semibold text-lg">Battles</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                Search battles and descriptions
+            </p>
+        </a>
+
+        <a href="{{ url_for('players_index') }}"
+           class="block border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition">
+            <h2 class="font-semibold text-lg">Players</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                Search by player name
+            </p>
+        </a>
+
+        <a href="{{ url_for('songs_page') }}"
+           class="block border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition">
+            <h2 class="font-semibold text-lg">Songs</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                Search by song title
+            </p>
+        </a>
+
+        <a href="{{ url_for('artists_page') }}"
+           class="block border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition">
+            <h2 class="font-semibold text-lg">Artists</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                Search by artist name
+            </p>
+        </a>
+
+        <a href="{{ url_for('stereotypes_landing_page') }}"
+           class="block border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition">
+            <h2 class="font-semibold text-lg">Stereotypes</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                Search stereotypes and recurring characters
+            </p>
+        </a>
+
+    </div>
+
+{% endif %}
+
 {% endblock %}

@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -10,33 +9,81 @@
   </h1>
 
   <p class="text-gray-600 text-lg mb-10">
-    Explore songs, artists, and videos used across Dude Perfect content.
+    Explore videos, battles, players, stereotypes, music and more from Dude Perfect.
   </p>
 
-  <!-- Primary actions -->
-  <div class="flex flex-col sm:flex-row justify-center gap-4 mb-14">
-    <a href="/songs"
-       class="inline-block px-6 py-3 bg-black text-white rounded hover:bg-gray-800 transition">
-      Search Songs
-    </a>
-
-    <a href="/artists"
-       class="inline-block px-6 py-3 border border-black rounded hover:bg-gray-100 transition">
-      Browse Artists
-    </a>
-
-    <a href="/videos"
-       class="inline-block px-6 py-3 border border-black rounded hover:bg-gray-100 transition">
-      Browse Videos
+  <!-- Primary action -->
+  <div class="mb-14">
+    <a
+      href="{{ url_for('search_home') }}"
+      class="inline-block px-8 py-3 bg-black text-white rounded hover:bg-gray-800 transition"
+    >
+      Search the Archive
     </a>
   </div>
+  <!-- Archive sections -->
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-left">
 
-  <!-- Optional context -->
-  <div class="text-sm text-gray-500 leading-relaxed max-w-2xl mx-auto">
-    <p>
-      This archive catalogs licensed music used in Dude Perfect videos,
-      with direct links between songs, artists, and appearances.
-    </p>
+  <a
+    href="{{ url_for('videos_page') }}"
+    class="border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition"
+  >
+    <div class="font-semibold text-lg">Videos</div>
+    <div class="text-sm text-gray-500 mt-1">
+      Browse the video archive
+    </div>
+  </a>
+
+  <a
+    href="{{ url_for('battles_page') }}"
+    class="border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition"
+  >
+    <div class="font-semibold text-lg">Battles</div>
+    <div class="text-sm text-gray-500 mt-1">
+      Explore battles, competitors, and winners
+    </div>
+  </a>
+
+  <a
+    href="{{ url_for('players_index') }}"
+    class="border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition"
+  >
+    <div class="font-semibold text-lg">Players</div>
+    <div class="text-sm text-gray-500 mt-1">
+      Browse players and their appearances
+    </div>
+  </a>
+
+  <a
+    href="{{ url_for('songs_page') }}"
+    class="border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition"
+  >
+    <div class="font-semibold text-lg">Songs</div>
+    <div class="text-sm text-gray-500 mt-1">
+      Discover music used in videos
+    </div>
+  </a>
+
+  <a
+    href="{{ url_for('artists_page') }}"
+    class="border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition"
+  >
+    <div class="font-semibold text-lg">Artists</div>
+    <div class="text-sm text-gray-500 mt-1">
+      Browse artists featured in the archive
+    </div>
+  </a>
+
+  <a
+    href="{{ url_for('stereotypes_landing_page') }}"
+    class="border rounded-lg p-5 hover:border-[#2EFCE6] hover:bg-gray-50 transition"
+  >
+  <div class="font-semibold text-lg">Stereotypes</div>
+  <div class="text-sm text-gray-500 mt-1">
+    Explore stereotypes, performers, and recurring characters
+  </div>
+  </a>
+
   </div>
 
 </div>
