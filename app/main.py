@@ -31,8 +31,10 @@ app.add_url_rule(
     endpoint="sitemap",
     view_func=sitemap,
 )
+
 @app.before_request
 def log_request():
+    remote_addr = request.remote_addr
     cf_ip = request.headers.get("CF-Connecting-IP")
     forwarded_for = request.headers.get("X-Forwarded-For")
     user_agent = request.headers.get("User-Agent")
@@ -46,13 +48,13 @@ def log_request():
         f"REQUEST "
         f"method={request.method} "
         f"path={path!r} "
+        f"remote_addr={remote_addr!r} "
         f"cf_ip={cf_ip!r} "
         f"x_forwarded_for={forwarded_for!r} "
         f"user_agent={user_agent!r} "
         f"referer={referer!r}",
         flush=True,
     )
-
 # =========================
 # Config
 # =========================
