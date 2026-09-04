@@ -1499,6 +1499,19 @@ def get_stereotypes_view(video_id: int):
             "theme": episode["theme"],
             "segments": formatted_segments
         }
+
+def get_stereotype_video_id(episode_id: int):
+    sql = text("""
+        SELECT video_id
+        FROM stereotypes_episodes
+        WHERE id = :episode_id
+    """)
+
+    with engine.connect() as conn:
+        return conn.execute(
+            sql,
+            {"episode_id": episode_id},
+        ).scalar_one_or_none()
         
 def get_song_detail(song_id: int):
     sql = text("""
@@ -1562,18 +1575,18 @@ def get_song_detail(song_id: int):
 
     return song
 
-def search_songs(query: str, limit: int = 50):
+def search_songs(query: str, limit: int | None = 50):
     sql = text("""
     SELECT
-     s.id,
-       s.title,
-       s.spotify_track_id,
-       array_agg(a.name ORDER BY sa.artist_order) AS artists
+        s.id,
+        s.title,
+        s.spotify_track_id,
+        array_agg(a.name ORDER BY sa.artist_order) AS artists
     FROM songs s
     JOIN song_artists sa ON sa.song_id = s.id
     JOIN artists a ON a.id = sa.artist_id
     WHERE unaccent(lower(s.title))
-                LIKE unaccent(lower(:q))
+        LIKE unaccent(lower(:q))
     GROUP BY s.id
     ORDER BY s.title
     LIMIT :limit
@@ -1588,17 +1601,15 @@ def search_songs(query: str, limit: int = 50):
             }
         ).mappings().all()
 
-    # Convert RowMapping → dict
     return [
-    {
-        "id": row["id"],
-        "title": row["title"],
-        "spotify_track_id": row["spotify_track_id"],
-        "artists": row["artists"],
-    }
-    for row in rows
+        {
+            "id": row["id"],
+            "title": row["title"],
+            "spotify_track_id": row["spotify_track_id"],
+            "artists": row["artists"],
+        }
+        for row in rows
     ]
-
 
 def get_all_artists():
     sql = text("""
@@ -1805,7 +1816,7 @@ def get_song_by_track_id(track_id: str):
         "artists": row["artists"],
     }
 
-def search_artists(query: str, limit: int = 50):
+def search_artists(query: str, limit: int | None = 50):
     sql = text("""
         SELECT
           a.id,
@@ -1840,7 +1851,7 @@ def search_artists(query: str, limit: int = 50):
         for row in rows
     ]
 
-def search_videos(query: str, limit: int = 50):
+def search_videos(query: str, limit: int | None = 50):
     sql = text("""
         SELECT
           v.id,
@@ -1877,7 +1888,7 @@ def search_videos(query: str, limit: int = 50):
         for row in rows
     ]
 
-def search_battles(query: str, limit: int = 50):
+def search_battles(query: str, limit: int | None = 50):
     sql = text("""
         SELECT
             b.id AS battle_id,
@@ -1909,7 +1920,7 @@ def search_battles(query: str, limit: int = 50):
 
     return [dict(row) for row in rows]
 
-def search_players(query: str, limit: int = 50):
+def search_players(query: str, limit: int | None = 50):
     sql = text("""
         SELECT id, name, slug
         FROM players
@@ -2160,7 +2171,7 @@ def get_video_category_by_slug(slug: str):
     with engine.connect() as conn:
         return conn.execute(sql, {"slug": slug}).mappings().first()
 
-def get_videos(limit: int = 50, offset: int = 0):
+def get_videos(limit: int | None = 50, offset: int = 0):
     sql = text("""
         SELECT
             v.id,
@@ -2227,84 +2238,91 @@ def list_videos_for_category(category_id: int, q: str | None = None):
     with engine.connect() as conn:
         return conn.execute(sql, params).mappings().all()
 
+def get_player_detail(*, player_id: int | None = None, slug: str | None = None):
+    if player_id is not None:
+        where_clause = "p.id = :value"
+        value = player_id
+    elif slug is not None:
+        where_clause = "p.slug = :value"
+        value = slug
+    else:
+        raise ValueError("player_id or slug is required")
+    sql = text(f"""
+            SELECT
+                p.id,
+                p.name,
+                p.full_name,
+                p.nickname,
+                p.hometown,
+                p.birthday,
+                p.bio,
+                p.image_url,
+                p.accent_color,
+                p.slug,
 
-def get_player_by_slug(slug: str):
-    sql = text("""
-        SELECT
-            p.id,
-            p.name,
-            p.full_name,
-            p.nickname,
-            p.hometown,
-            p.birthday,
-            p.bio,
-            p.image_url,
-            p.accent_color,
-            p.slug,
-
-            (
-                SELECT COUNT(DISTINCT bp.battle_id)
-                FROM battle_players bp
-                WHERE bp.player_id = p.id
-            ) AS total_battles,
-            
-            (
-                SELECT COUNT(DISTINCT br.battle_id)
-                FROM battle_results br
-                WHERE br.placement = 1
-                  AND (
-                      br.player_id = p.id
-                      OR EXISTS (
-                          SELECT 1
-                          FROM battle_team_members btm
-                          JOIN battle_players winner_bp
-                              ON winner_bp.id = btm.battle_player_id
-                          WHERE btm.team_id = br.battle_team_id
-                            AND winner_bp.player_id = p.id
-                      )
-                  )
-            ) AS total_wins,
-            
-            ROUND(
                 (
-                    (
-                        SELECT COUNT(DISTINCT br.battle_id)
-                        FROM battle_results br
-                        WHERE br.placement = 1
-                          AND (
-                              br.player_id = p.id
-                              OR EXISTS (
-                                  SELECT 1
-                                  FROM battle_team_members btm
-                                  JOIN battle_players winner_bp
-                                      ON winner_bp.id = btm.battle_player_id
-                                  WHERE btm.team_id = br.battle_team_id
-                                    AND winner_bp.player_id = p.id
-                              )
-                          )
-                    ) * 100.0
-                )
-                /
-                NULLIF(
-                    (
-                        SELECT COUNT(DISTINCT bp.battle_id)
-                        FROM battle_players bp
-                        WHERE bp.player_id = p.id
-                    ),
-                    0
-                ),
-                1
-            ) AS win_rate
+                    SELECT COUNT(DISTINCT bp.battle_id)
+                    FROM battle_players bp
+                    WHERE bp.player_id = p.id
+                ) AS total_battles,
 
-        FROM players p
-        WHERE p.slug = :slug
-        LIMIT 1
-    """)
+                (
+                    SELECT COUNT(DISTINCT br.battle_id)
+                    FROM battle_results br
+                    WHERE br.placement = 1
+                      AND (
+                          br.player_id = p.id
+                          OR EXISTS (
+                              SELECT 1
+                              FROM battle_team_members btm
+                              JOIN battle_players winner_bp
+                                  ON winner_bp.id = btm.battle_player_id
+                              WHERE btm.team_id = br.battle_team_id
+                                AND winner_bp.player_id = p.id
+                          )
+                      )
+                ) AS total_wins,
+
+                ROUND(
+                    (
+                        (
+                            SELECT COUNT(DISTINCT br.battle_id)
+                            FROM battle_results br
+                            WHERE br.placement = 1
+                              AND (
+                                  br.player_id = p.id
+                                  OR EXISTS (
+                                      SELECT 1
+                                      FROM battle_team_members btm
+                                      JOIN battle_players winner_bp
+                                          ON winner_bp.id = btm.battle_player_id
+                                      WHERE btm.team_id = br.battle_team_id
+                                        AND winner_bp.player_id = p.id
+                                  )
+                              )
+                        ) * 100.0
+                    )
+                    /
+                    NULLIF(
+                        (
+                            SELECT COUNT(DISTINCT bp.battle_id)
+                            FROM battle_players bp
+                            WHERE bp.player_id = p.id
+                        ),
+                        0
+                    ),
+                    1
+                ) AS win_rate
+
+            FROM players p
+            WHERE {where_clause}
+            LIMIT 1
+        """)
 
     with engine.connect() as conn:
         row = conn.execute(
             sql,
-            {"slug": slug}
+            {"value": value}
         ).mappings().first()
 
     if not row:
@@ -2312,7 +2330,13 @@ def get_player_by_slug(slug: str):
 
     return dict(row)
 
-def get_recent_battles_for_player(player_id: int, limit: int = 10):
+def get_player_by_slug(slug: str):
+    return get_player_detail(slug=slug)
+
+def get_player_by_id(player_id: int):
+    return get_player_detail(player_id=player_id)
+
+def get_recent_battles_for_player(player_id: int, limit: int | None = 10):
     sql = text("""
         SELECT DISTINCT
             b.id AS battle_id,
@@ -2382,7 +2406,7 @@ def list_players():
     return [dict(r) for r in rows]
 
 
-def get_stereotype_appearances_for_player(player_id: int, limit: int = 10):
+def get_stereotype_appearances_for_player(player_id: int, limit: int | None = 10):
     sql = text("""
         SELECT
             ss.id AS segment_id,

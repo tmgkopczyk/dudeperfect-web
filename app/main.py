@@ -1,3 +1,5 @@
+from apiflask import APIFlask
+
 from flask import (
     Flask,
     render_template,
@@ -13,13 +15,17 @@ import requests
 import queries
 from robots import robots
 from sitemap import sitemap
-
+from api import api
 
 # =========================
 # App setup
 # =========================
 
-app = Flask(__name__)
+app = APIFlask(
+    __name__,
+    title="Dude Perfect Fan Archive API",
+    version="1.0.0"
+)
 app.add_url_rule(
     "/robots.txt",
     endpoint="robots",
@@ -31,6 +37,19 @@ app.add_url_rule(
     endpoint="sitemap",
     view_func=sitemap,
 )
+app.register_blueprint(api)
+
+@app.spec_processor
+def filter_api_paths(spec):
+    spec["paths"] = {
+        path: operations
+        for path, operations in spec["paths"].items()
+        if path.startswith("/api/")
+    }
+    return spec
+
+SEARCH_RESULTS_PER_CATEGORY = 10
+PER_PAGE = 50
 
 @app.before_request
 def log_request():
@@ -110,13 +129,13 @@ def search_home():
 
     if q:
         results = {
-            "videos": queries.search_videos(q, limit=10),
-            "battles": queries.search_battles(q, limit=10),
-            "songs": queries.search_songs(q, limit=10),
-            "artists": queries.search_artists(q, limit=10),
-            "players": queries.search_players(q,limit=10),
-            "stereotypes": queries.search_stereotype_segments(q,limit=10),
-            "recurring_stereotypes": queries.search_recurring_stereotypes(q,limit=10)
+            "videos": queries.search_videos(q, limit=SEARCH_RESULTS_PER_CATEGORY),
+            "battles": queries.search_battles(q, limit=SEARCH_RESULTS_PER_CATEGORY),
+            "songs": queries.search_songs(q, limit=SEARCH_RESULTS_PER_CATEGORY),
+            "artists": queries.search_artists(q, limit=SEARCH_RESULTS_PER_CATEGORY),
+            "players": queries.search_players(q, limit=SEARCH_RESULTS_PER_CATEGORY),
+            "stereotypes": queries.search_stereotype_segments(q, limit=SEARCH_RESULTS_PER_CATEGORY),
+            "recurring_stereotypes": queries.search_recurring_stereotypes(q, limit=SEARCH_RESULTS_PER_CATEGORY),
         }
     return render_template(
         "search/index.html",
@@ -375,8 +394,6 @@ def videos_page():
     q = request.args.get("q")
     page = request.args.get("page", 1, type=int)
 
-    PER_PAGE = 50
-
     if page < 1:
         page = 1
 
@@ -501,48 +518,9 @@ def battle_detail(battle_id):
         battle=battle,
     )
 
-# =========================
-# API
-# =========================
-
-@app.route("/api/search")
-def api_search():
-    q = request.args.get("q", "")
-    return jsonify(queries.search_songs(q))
-
-
-@app.route("/api/songs/<int:song_id>")
-def api_song(song_id):
-    song = queries.get_song_detail(song_id)
-
-    if not song:
-        abort(404)
-
-    return jsonify(song)
-
-
-@app.route("/api/artists/<int:artist_id>")
-def api_artist(artist_id):
-    artist = queries.get_artist_detail(artist_id)
-
-    if not artist:
-        abort(404)
-
-    return jsonify(artist)
-
-
-@app.route("/api/videos/<int:video_id>")
-def api_video(video_id):
-    video = queries.get_video_detail_page(video_id)
-
-    if not video:
-        abort(404)
-
-    return jsonify(video)
-
 if __name__ == "__main__":
     app.run(
-        host="127.0.0.1",
         port=8081,
-        debug=True
+        debug=True,
+        host="0.0.0.0"
     )
