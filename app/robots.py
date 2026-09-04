@@ -1,4 +1,7 @@
-from flask import Response
+from fastapi import APIRouter, Response
+
+
+router = APIRouter(include_in_schema=False)
 
 
 ROBOTS_TXT = """User-agent: *
@@ -14,10 +17,11 @@ Sitemap: https://dudeperfectfanarchive.com/sitemap.xml
 """
 
 
+@router.get("/robots.txt")
 def robots():
     return Response(
-        ROBOTS_TXT,
-        mimetype="text/plain",
+        content=ROBOTS_TXT,
+        media_type="text/plain",
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",

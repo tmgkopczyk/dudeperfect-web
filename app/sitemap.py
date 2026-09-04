@@ -1,13 +1,16 @@
-from flask import Response
+from fastapi import APIRouter, Response
 from sqlalchemy import text
 
 from db import engine
 from queries import list_video_categories
 
 
+router = APIRouter(include_in_schema=False)
+
 BASE_URL = "https://dudeperfectfanarchive.com"
 
 
+@router.get("/sitemap.xml")
 def sitemap():
     urls: list[str] = []
 
@@ -52,8 +55,8 @@ def sitemap():
             urls.append(f"{BASE_URL}/player/{row.slug}")
 
     return Response(
-        render_sitemap(urls),
-        mimetype="application/xml",
+        content=render_sitemap(urls),
+        media_type="application/xml",
     )
 
 

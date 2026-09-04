@@ -1,79 +1,70 @@
-from apiflask import APIFlask
-
-from flask import (
-    Flask,
-    render_template,
-    request,
-    abort,
-    jsonify,
-    redirect,
-    url_for
-)
+from fastapi import FastAPI, Request, APIRouter, HTTPException, Form
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+from robots import router as robots_router
+from sitemap import router as sitemap_router
+from api import api as api_router
 import math
 import os
 import requests
 import queries
-from robots import robots
-from sitemap import sitemap
-from api import api
+
 
 # =========================
 # App setup
 # =========================
 
-app = APIFlask(
-    __name__,
+BASE_DIR = Path(__file__).resolve().parent
+
+app = FastAPI(
     title="Dude Perfect Fan Archive API",
-    version="1.0.0"
-)
-app.add_url_rule(
-    "/robots.txt",
-    endpoint="robots",
-    view_func=robots,
+    version="1.0.0",
 )
 
-app.add_url_rule(
-    "/sitemap.xml",
-    endpoint="sitemap",
-    view_func=sitemap,
-)
-app.register_blueprint(api)
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-@app.spec_processor
-def filter_api_paths(spec):
-    spec["paths"] = {
-        path: operations
-        for path, operations in spec["paths"].items()
-        if path.startswith("/api/")
-    }
-    return spec
+app.mount(
+    "/static",
+    StaticFiles(directory=str(BASE_DIR / "static")),
+    name="static",
+)
+
+
+# =========================
+# Routers
+# =========================
+
+pages = APIRouter(include_in_schema=False)
 
 SEARCH_RESULTS_PER_CATEGORY = 10
 PER_PAGE = 50
 
-@app.before_request
-def log_request():
-    remote_addr = request.remote_addr
-    cf_ip = request.headers.get("CF-Connecting-IP")
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    user_agent = request.headers.get("User-Agent")
-    referer = request.headers.get("Referer")
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    cf_ip = request.headers.get("cf-connecting-ip")
+    forwarded_for = request.headers.get("x-forwarded-for")
+    user_agent = request.headers.get("user-agent")
+    referer = request.headers.get("referer")
 
-    path = request.full_path
-    if path.endswith("?"):
-        path = path[:-1]
+    path = request.url.path
+    if request.url.query:
+        path += f"?{request.url.query}"
 
     print(
         f"REQUEST "
         f"method={request.method} "
         f"path={path!r} "
-        f"remote_addr={remote_addr!r} "
         f"cf_ip={cf_ip!r} "
         f"x_forwarded_for={forwarded_for!r} "
         f"user_agent={user_agent!r} "
         f"referer={referer!r}",
         flush=True,
     )
+
+    response = await call_next(request)
+    return response
 # =========================
 # Config
 # =========================
@@ -87,6 +78,9 @@ TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
 # =========================
 # Helpers
 # =========================
+
+def render(request:Request,template:str,context:dict | None = None,status_code: int = 200):
+    return templates.TemplateResponse(template,{"request":request,**(context or {})},status_code=status_code)
 
 def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
     if not TURNSTILE_SECRET:
@@ -107,23 +101,22 @@ def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
 # Static / misc
 # =========================
 
-@app.route("/favicon.ico")
+@app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return app.send_static_file("favicon.ico")
-
+    return FileResponse(BASE_DIR / "static" / "favicon.ico")
 
 # =========================
 # Pages
 # =========================
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+@pages.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    return render(request, "index.html")
 
 
-@app.route("/search")
-def search_home():
-    q = request.args.get("q", "").strip()
+@pages.get("/search", response_class=HTMLResponse)
+def search_home(request: Request, q: str = ""):
+    q = q.strip()
 
     results = None
 
@@ -134,13 +127,23 @@ def search_home():
             "songs": queries.search_songs(q, limit=SEARCH_RESULTS_PER_CATEGORY),
             "artists": queries.search_artists(q, limit=SEARCH_RESULTS_PER_CATEGORY),
             "players": queries.search_players(q, limit=SEARCH_RESULTS_PER_CATEGORY),
-            "stereotypes": queries.search_stereotype_segments(q, limit=SEARCH_RESULTS_PER_CATEGORY),
-            "recurring_stereotypes": queries.search_recurring_stereotypes(q, limit=SEARCH_RESULTS_PER_CATEGORY),
+            "stereotypes": queries.search_stereotype_segments(
+                q,
+                limit=SEARCH_RESULTS_PER_CATEGORY,
+            ),
+            "recurring_stereotypes": queries.search_recurring_stereotypes(
+                q,
+                limit=SEARCH_RESULTS_PER_CATEGORY,
+            ),
         }
-    return render_template(
+
+    return render(
+        request,
         "search/index.html",
-        query=q,
-        results=results,
+        {
+            "query": q,
+            "results": results,
+        },
     )
 
 
@@ -148,59 +151,86 @@ def search_home():
 # Stereotypes
 # =========================
 
-@app.route("/stereotypes")
-def stereotypes_landing_page():
+@pages.get("/stereotypes", response_class=HTMLResponse)
+def stereotypes_landing_page(request: Request):
     episodes = queries.get_stereotypes_episodes()
 
-    return render_template(
+    return render(
+        request,
         "stereotypes/stereotypes_landing.html",
-        episodes=episodes,
+        {
+            "episodes": episodes,
+        },
     )
 
 
-@app.route("/stereotypes/recurring")
-def recurring_stereotypes_page():
+@pages.get("/stereotypes/recurring", response_class=HTMLResponse)
+def recurring_stereotypes_page(request: Request):
     recurring = queries.get_recurring_stereotypes()
 
-    return render_template(
+    return render(
+        request,
         "stereotypes/recurring.html",
-        recurring=recurring,
+        {
+            "recurring": recurring,
+        },
     )
 
 
-@app.route("/stereotypes/recurring/<int:recurring_id>")
-def recurring_stereotype_detail(recurring_id):
+@pages.get(
+    "/stereotypes/recurring/{recurring_id}",
+    response_class=HTMLResponse,
+)
+def recurring_stereotype_detail(
+    request: Request,
+    recurring_id: int,
+):
     recurring = queries.get_recurring_stereotype(recurring_id)
 
     if not recurring:
-        abort(404)
+        raise HTTPException(status_code=404)
 
-    return render_template(
+    return render(
+        request,
         "stereotypes/recurring_detail.html",
-        recurring=recurring,
+        {
+            "recurring": recurring,
+        },
     )
 
 
-@app.route("/stereotypes/performers")
-def stereotype_performers_page():
+@pages.get("/stereotypes/performers", response_class=HTMLResponse)
+def stereotype_performers_page(request: Request):
     performers = queries.get_stereotype_performers()
 
-    return render_template(
+    return render(
+        request,
         "stereotypes/performers.html",
-        performers=performers,
+        {
+            "performers": performers,
+        },
     )
 
 
-@app.route("/stereotypes/performers/<int:player_id>")
-def stereotype_performer_detail(player_id):
+@pages.get(
+    "/stereotypes/performers/{player_id}",
+    response_class=HTMLResponse,
+)
+def stereotype_performer_detail(
+    request: Request,
+    player_id: int,
+):
     performer = queries.get_stereotype_performer_view(player_id)
 
     if not performer:
-        abort(404)
+        raise HTTPException(status_code=404)
 
-    return render_template(
+    return render(
+        request,
         "stereotypes/performer_detail.html",
-        performer=performer,
+        {
+            "performer": performer,
+        },
     )
 
 
@@ -208,52 +238,55 @@ def stereotype_performer_detail(player_id):
 # Contact
 # =========================
 
-@app.route("/contact")
-def contact_page():
-    return render_template(
+@pages.get("/contact", response_class=HTMLResponse)
+def contact_page(request: Request):
+    return render(
+        request,
         "contact.html",
-        turnstile_site_key=TURNSTILE_SITE_KEY,
+        {
+            "turnstile_site_key": TURNSTILE_SITE_KEY,
+        },
     )
 
 
-@app.route("/contact/submit", methods=["POST"])
-def contact_submit():
-    name = request.form.get("name", "")
-    email = request.form.get("email", "")
-    message = request.form.get("message", "")
-    website = request.form.get("website", "")
-    cf_turnstile_response = request.form.get(
-        "cf-turnstile-response",
-        "",
-    )
-
+@pages.post("/contact/submit", response_class=HTMLResponse)
+def contact_submit(
+    request: Request,
+    name: str = Form(""),
+    email: str = Form(""),
+    message: str = Form(""),
+    website: str = Form(""),
+    cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
+):
     # Honeypot
     if website.strip():
-        return render_template("contact_success.html")
+        return render(request, "contact_success.html")
 
     if not name.strip() or not email.strip() or not message.strip():
-        return (
-            render_template(
-                "contact.html",
-                error="Please fill out all fields.",
-                turnstile_site_key=TURNSTILE_SITE_KEY,
-            ),
-            400,
+        return render(
+            request,
+            "contact.html",
+            {
+                "error": "Please fill out all fields.",
+                "turnstile_site_key": TURNSTILE_SITE_KEY,
+            },
+            status_code=400,
         )
 
-    remote_addr = request.remote_addr
+    remote_addr = request.client.host if request.client else None
 
     if not verify_turnstile(
         cf_turnstile_response,
         remote_addr,
     ):
-        return (
-            render_template(
-                "contact.html",
-                error="Verification failed.",
-                turnstile_site_key=TURNSTILE_SITE_KEY,
-            ),
-            400,
+        return render(
+            request,
+            "contact.html",
+            {
+                "error": "Verification failed.",
+                "turnstile_site_key": TURNSTILE_SITE_KEY,
+            },
+            status_code=400,
         )
 
     try:
@@ -269,16 +302,16 @@ def contact_submit():
     except requests.RequestException:
         pass
 
-    return render_template("contact_success.html")
-
+    return render(request, "contact_success.html")
 # =========================
 # Songs
 # =========================
 
-@app.route("/songs")
-def songs_page():
-    q = request.args.get("q")
-
+@pages.get("/songs", response_class=HTMLResponse)
+def songs_page(
+    request: Request,
+    q: str | None = None,
+):
     if q:
         results = queries.search_songs(q)
         songs = None
@@ -288,25 +321,34 @@ def songs_page():
         songs = queries.get_all_songs()
         letters = queries.get_song_letters()
 
-    return render_template(
+    return render(
+        request,
         "songs/songs.html",
-        results=results,
-        songs=songs,
-        letters=letters,
-        query=q,
+        {
+            "results": results,
+            "songs": songs,
+            "letters": letters,
+            "query": q,
+        },
     )
 
 
-@app.route("/songs/<int:song_id>")
-def song_detail(song_id):
+@pages.get("/songs/{song_id}", response_class=HTMLResponse)
+def song_detail(
+    request: Request,
+    song_id: int,
+):
     song = queries.get_song_detail(song_id)
 
     if not song:
-        abort(404)
+        raise HTTPException(status_code=404)
 
-    return render_template(
+    return render(
+        request,
         "songs/song_detail.html",
-        song=song,
+        {
+            "song": song,
+        },
     )
 
 
@@ -314,10 +356,11 @@ def song_detail(song_id):
 # Artists
 # =========================
 
-@app.route("/artists")
-def artists_page():
-    q = request.args.get("q")
-
+@pages.get("/artists", response_class=HTMLResponse)
+def artists_page(
+    request: Request,
+    q: str | None = None,
+):
     if q:
         results = queries.search_artists(q)
         artists = None
@@ -327,38 +370,49 @@ def artists_page():
         artists = queries.get_all_artists()
         letters = queries.get_artist_letters()
 
-    return render_template(
+    return render(
+        request,
         "artists/artists.html",
-        results=results,
-        artists=artists,
-        letters=letters,
-        query=q,
+        {
+            "results": results,
+            "artists": artists,
+            "letters": letters,
+            "query": q,
+        },
     )
 
 
-@app.route("/artists/<int:artist_id>")
-def artist_detail(artist_id):
+@pages.get("/artists/{artist_id}", response_class=HTMLResponse)
+def artist_detail(
+    request: Request,
+    artist_id: int,
+):
     artist = queries.get_artist_detail(artist_id)
 
     if not artist:
-        abort(404)
+        raise HTTPException(status_code=404)
 
-    return render_template(
+    return render(
+        request,
         "artists/artist_detail.html",
-        artist=artist,
+        {
+            "artist": artist,
+        },
     )
-
 
 # =========================
 # Players
 # =========================
 
-@app.route("/player/<slug>")
-def player_page(slug):
+@pages.get("/player/{slug}", response_class=HTMLResponse)
+def player_page(
+    request: Request,
+    slug: str,
+):
     player = queries.get_player_by_slug(slug)
 
     if not player:
-        abort(404)
+        raise HTTPException(status_code=404)
 
     recent_battles = queries.get_recent_battles_for_player(
         player["id"]
@@ -367,21 +421,27 @@ def player_page(slug):
         player["id"]
     )
 
-    return render_template(
+    return render(
+        request,
         "players/player_detail.html",
-        player=player,
-        recent_battles=recent_battles,
-        recent_stereotype_appearances=stereotype_appearances
+        {
+            "player": player,
+            "recent_battles": recent_battles,
+            "recent_stereotype_appearances": stereotype_appearances,
+        },
     )
 
 
-@app.route("/players")
-def players_index():
+@pages.get("/players", response_class=HTMLResponse)
+def players_index(request: Request):
     players = queries.list_players()
 
-    return render_template(
+    return render(
+        request,
         "players/index.html",
-        players=players,
+        {
+            "players": players,
+        },
     )
 
 
@@ -389,11 +449,12 @@ def players_index():
 # Videos
 # =========================
 
-@app.route("/videos")
-def videos_page():
-    q = request.args.get("q")
-    page = request.args.get("page", 1, type=int)
-
+@pages.get("/videos", response_class=HTMLResponse)
+def videos_page(
+    request: Request,
+    q: str | None = None,
+    page: int = 1,
+):
     if page < 1:
         page = 1
 
@@ -412,30 +473,31 @@ def videos_page():
             offset=(page - 1) * PER_PAGE,
         )
 
-    return render_template(
+    return render(
+        request,
         "videos/videos.html",
-        query=q,
-        results=results,
-        videos=videos,
-        page=page,
-        total_pages=total_pages,
+        {
+            "query": q,
+            "results": results,
+            "videos": videos,
+            "page": page,
+            "total_pages": total_pages,
+        },
     )
 
 
-@app.route("/videos/youtube/<youtube_video_id>")
-def video_by_youtube_id(youtube_video_id):
+@pages.get("/videos/youtube/{youtube_video_id}")
+def video_by_youtube_id(youtube_video_id: str):
     video_id = queries.get_video_id_by_youtube_id(
         youtube_video_id
     )
 
     if video_id is None:
-        abort(404)
+        raise HTTPException(status_code=404)
 
-    return redirect(
-        url_for(
-            "video_detail",
-            video_id=video_id,
-        )
+    return RedirectResponse(
+        url=f"/videos/{video_id}",
+        status_code=302,
     )
 
 
@@ -443,84 +505,114 @@ def video_by_youtube_id(youtube_video_id):
 # Video Categories
 # =========================
 
-@app.route("/videos/categories")
-def categories_page():
-    return render_template(
+@pages.get("/videos/categories", response_class=HTMLResponse)
+def categories_page(request: Request):
+    return render(
+        request,
         "videos/categories/index.html",
-        categories=queries.list_video_categories(),
+        {
+            "categories": queries.list_video_categories(),
+        },
     )
 
 
-@app.route("/videos/categories/<slug>")
-def category_detail(slug):
-    q = request.args.get("q")
-
+@pages.get(
+    "/videos/categories/{slug}",
+    response_class=HTMLResponse,
+)
+def category_detail(
+    request: Request,
+    slug: str,
+    q: str | None = None,
+):
     category = queries.get_video_category_by_slug(slug)
 
     if not category:
-        abort(404)
+        raise HTTPException(status_code=404)
 
     videos = queries.list_videos_for_category(
         category["id"],
         q=q,
     )
 
-    return render_template(
+    return render(
+        request,
         "videos/categories/category_detail.html",
-        category=category,
-        videos=videos,
-        query=q,
+        {
+            "category": category,
+            "videos": videos,
+            "query": q,
+        },
     )
 
 
-@app.route("/videos/<int:video_id>")
-def video_detail(video_id):
+@pages.get("/videos/{video_id}", response_class=HTMLResponse)
+def video_detail(
+    request: Request,
+    video_id: int,
+):
     video = queries.get_video_detail_page(video_id)
 
     if not video:
-        abort(404)
+        raise HTTPException(status_code=404)
 
-    return render_template(
+    return render(
+        request,
         "videos/video_detail.html",
-        video=video,
-        battle=queries.get_battle_view(video_id),
-        overtime=queries.get_overtime_view(video_id),
-        bucket_list=queries.get_bucket_list_view(video_id),
-        stereotypes=queries.get_stereotypes_view(video_id),
+        {
+            "video": video,
+            "battle": queries.get_battle_view(video_id),
+            "overtime": queries.get_overtime_view(video_id),
+            "bucket_list": queries.get_bucket_list_view(video_id),
+            "stereotypes": queries.get_stereotypes_view(video_id),
+        },
     )
 
-@app.route("/battles")
-def battles_page():
+
+# =========================
+# Battles
+# =========================
+
+@pages.get("/battles", response_class=HTMLResponse)
+def battles_page(request: Request):
     battles = queries.get_battles()
 
-    return render_template(
+    return render(
+        request,
         "battles/index.html",
-        battles=battles,
+        {
+            "battles": battles,
+        },
     )
 
 
-@app.route("/battles/<int:battle_id>")
-def battle_detail(battle_id):
+@pages.get("/battles/{battle_id}", response_class=HTMLResponse)
+def battle_detail(
+    request: Request,
+    battle_id: int,
+):
     video_id = queries.get_battle_video_id(battle_id)
 
     if video_id is None:
-        abort(404)
+        raise HTTPException(status_code=404)
 
     video = queries.get_video_detail_page(video_id)
     battle = queries.get_battle_view(video_id)
 
     if not video or not battle:
-        abort(404)
+        raise HTTPException(status_code=404)
 
-    return render_template(
+    return render(
+        request,
         "battles/detail.html",
-        video=video,
-        battle=battle,
+        {
+            "video": video,
+            "battle": battle,
+        },
     )
 
-if __name__ == "__main__":
-    app.run(
-        port=8081,
-        debug=True,
-        host="0.0.0.0"
-    )
+
+app.include_router(pages)
+app.include_router(api_router)
+app.include_router(robots_router)
+app.include_router(sitemap_router)
