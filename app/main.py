@@ -24,7 +24,10 @@ app = FastAPI(
 )
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-
+templates.env.globals["environment"] = os.getenv(
+    "CURRENT_ENVIRONMENT",
+    "development"
+)
 app.mount(
     "/static",
     StaticFiles(directory=str(BASE_DIR / "static")),

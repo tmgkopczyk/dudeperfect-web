@@ -3,12 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}Dude Perfect Fan Archive{% endblock %}</title>
+  <title>{% if environment == "development" %}[DEV] {% endif %}{% block title %}Dude Perfect Fan Archive{% endblock %}</title>
   <meta name="description" content="{% block description %}Explore videos, battles, players, stereotypes, music, and more from Dude Perfect.{% endblock %}">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-[#F9FAFB] text-[#1F1F1F] min-h-screen flex flex-col">
+  {% if environment == "development" %}
+  <div class="bg-yellow-300 text-black text-center font-bold text-sm py-2 px-4">
+    ⚠ DEVELOPMENT ENVIRONMENT — Changes here are not live
+  </div>
+  {% endif %}
 
   <!-- Header / Nav -->
   <header class="bg-[#1F1F1F] text-white">

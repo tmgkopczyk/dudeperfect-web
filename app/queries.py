@@ -1037,6 +1037,24 @@ def get_overtime_view(video_id: int):
                     "requirements": [dict(r) for r in requirements],
                     "teams": teams
                 })
+            elif canonical_type == "Fight Scene":
+                fight_scene = conn.execute(
+                    text("""
+                        SELECT
+                            theme,
+                            participants,
+                            notes
+                        FROM overtime_fight_scenes
+                        WHERE segment_id = :segment_id
+                        LIMIT 1
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                formatted_segments.append({
+                    "segment_type": raw_type,
+                    "fight_scene": dict(fight_scene) if fight_scene else None
+                })
             else:
                 formatted_segments.append({
                     "segment_type": raw_type,
