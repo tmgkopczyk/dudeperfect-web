@@ -1055,6 +1055,109 @@ def get_overtime_view(video_id: int):
                     "segment_type": raw_type,
                     "fight_scene": dict(fight_scene) if fight_scene else None
                 })
+            elif canonical_type == "50-50":
+                fifty_fifty = conn.execute(
+                    text("""
+                        SELECT
+                            e.id,
+                            e.winner_player_id,
+                            p.name AS winner_name,
+                            e.notes
+                        FROM overtime_50_50_events e
+                        LEFT JOIN players p
+                            ON p.id = e.winner_player_id
+                        WHERE e.segment_id = :segment_id
+                        LIMIT 1
+                    """),
+                    {"segment_id": segment_id}
+                ).mappings().first()
+
+                if fifty_fifty:
+                    challenges = conn.execute(
+                        text("""
+                            SELECT
+                                id,
+                                challenge_order,
+                                round_number,
+                                name,
+                                notes
+                            FROM overtime_50_50_challenges
+                            WHERE event_id = :event_id
+                            ORDER BY challenge_order
+                        """),
+                        {"event_id": fifty_fifty["id"]}
+                    ).mappings().all()
+
+                    formatted_challenges = []
+
+                    for challenge in challenges:
+                        attempts = conn.execute(
+                            text("""
+                                SELECT
+                                    a.attempt_order,
+                                    a.option_1,
+                                    a.option_2,
+                                    a.choice,
+                                    a.outcome,
+                                    a.result,
+                                    a.notes,
+                                    p.id AS player_id,
+                                    p.name AS player_name,
+                                    p.slug AS player_slug
+                                FROM overtime_50_50_attempts a
+                                JOIN players p
+                                    ON p.id = a.player_id
+                                WHERE a.challenge_id = :challenge_id
+                                ORDER BY a.attempt_order
+                            """),
+                            {"challenge_id": challenge["id"]}
+                        ).mappings().all()
+
+                        formatted_challenges.append({
+                            "id": challenge["id"],
+                            "challenge_order": challenge["challenge_order"],
+                            "round_number": challenge["round_number"],
+                            "name": challenge["name"],
+                            "notes": challenge["notes"],
+                            "attempts": [
+                                {
+                                    "attempt_order": attempt["attempt_order"],
+                                    "option_1": attempt["option_1"],
+                                    "option_2": attempt["option_2"],
+                                    "choice": attempt["choice"],
+                                    "outcome": attempt["outcome"],
+                                    "result": attempt["result"],
+                                    "notes": attempt["notes"],
+                                    "player": {
+                                        "id": attempt["player_id"],
+                                        "name": attempt["player_name"],
+                                        "slug": attempt["player_slug"],
+                                    },
+                                }
+                                for attempt in attempts
+                            ],
+                        })
+
+                    formatted_segments.append({
+                        "segment_type": raw_type,
+                        "fifty_fifty": {
+                            "winner": (
+                                {
+                                    "id": fifty_fifty["winner_player_id"],
+                                    "name": fifty_fifty["winner_name"],
+                                }
+                                if fifty_fifty["winner_player_id"] is not None
+                                else None
+                            ),
+                            "notes": fifty_fifty["notes"],
+                            "challenges": formatted_challenges,
+                        },
+                    })
+                else:
+                    formatted_segments.append({
+                        "segment_type": raw_type,
+                        "fifty_fifty": None,
+                    })
             else:
                 formatted_segments.append({
                     "segment_type": raw_type,

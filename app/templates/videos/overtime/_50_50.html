@@ -1,0 +1,192 @@
+<div class="border rounded-lg p-4 bg-white space-y-4">
+
+  <div class="font-semibold text-lg">
+    {{ segment.segment_type }}
+  </div>
+
+  {% if segment.fifty_fifty %}
+
+    {% set event = segment.fifty_fifty %}
+
+    {% if event.winner %}
+      <div class="text-sm text-neutral-500">
+        Winner:
+        <span class="text-green-600 font-semibold">
+          🏆 {{ event.winner.name }}
+        </span>
+      </div>
+    {% endif %}
+
+    {% if event.notes %}
+      <div class="text-sm text-neutral-600">
+        {{ event.notes }}
+      </div>
+    {% endif %}
+
+
+    {% if event.challenges %}
+
+      {% for challenge in event.challenges %}
+
+        {#
+          Determine whether every attempt has the same pair of options.
+
+          OT39:
+              Left Door / Right Door
+              Left Door / Right Door
+              ...
+          => display options once for the challenge.
+
+          OT32:
+              each attempt can have different options
+          => display options inside each attempt.
+        #}
+
+        {% set option_state = namespace(
+          initialized=false,
+          option_1=none,
+          option_2=none,
+          same=true
+        ) %}
+
+        {% for attempt in challenge.attempts %}
+          {% if not option_state.initialized %}
+            {% set option_state.option_1 = attempt.option_1 %}
+            {% set option_state.option_2 = attempt.option_2 %}
+            {% set option_state.initialized = true %}
+          {% elif attempt.option_1 != option_state.option_1
+              or attempt.option_2 != option_state.option_2 %}
+            {% set option_state.same = false %}
+          {% endif %}
+        {% endfor %}
+
+
+        <div class="pt-3 border-t first:border-t-0 first:pt-0 space-y-2">
+
+          <div>
+            <div class="font-semibold text-neutral-700">
+              {% if challenge.round_number %}
+                Round {{ challenge.round_number }}
+                {% if challenge.name %}
+                  — {{ challenge.name }}
+                {% endif %}
+              {% else %}
+                {{ challenge.name }}
+              {% endif %}
+            </div>
+
+            {% if option_state.same
+                  and (option_state.option_1 or option_state.option_2) %}
+              <div class="text-sm text-neutral-500">
+                Options:
+                {{ option_state.option_1 or "Unknown" }}
+                /
+                {{ option_state.option_2 or "Unknown" }}
+              </div>
+            {% endif %}
+
+            {% if challenge.notes %}
+              <div class="text-sm text-neutral-500">
+                {{ challenge.notes }}
+              </div>
+            {% endif %}
+          </div>
+
+
+          {% for attempt in challenge.attempts %}
+
+            <div class="border rounded px-3 py-2 space-y-1">
+
+              <div class="flex justify-between items-center gap-4">
+
+                <div class="font-medium">
+                  {{ attempt.player.name }}
+                </div>
+
+                {% if attempt.result %}
+                  {% if attempt.result == "winner" %}
+                    <div class="text-green-600 font-semibold">
+                      🏆 Winner
+                    </div>
+
+                  {% elif attempt.result == "survived" %}
+                    <div class="text-green-600 font-semibold">
+                      ✓ Survived
+                    </div>
+
+                  {% elif attempt.result == "eliminated" %}
+                    <div class="text-red-600 font-semibold">
+                      ✗ Eliminated
+                    </div>
+
+                  {% else %}
+                    <div class="font-medium">
+                      {{ attempt.result | replace("_", " ") | title }}
+                    </div>
+                  {% endif %}
+                {% endif %}
+
+              </div>
+
+
+              {# Per-attempt options, used when they aren't shared. #}
+
+              {% if not option_state.same
+                    and (attempt.option_1 or attempt.option_2) %}
+                <div class="text-sm text-neutral-500">
+                  <strong>Options:</strong>
+                  {{ attempt.option_1 or "Unknown" }}
+                  /
+                  {{ attempt.option_2 or "Unknown" }}
+                </div>
+              {% endif %}
+
+
+              {% if attempt.choice %}
+                <div class="text-sm">
+                  <strong>Choice:</strong>
+                  {{ attempt.choice }}
+                </div>
+              {% endif %}
+
+
+              {% if attempt.outcome %}
+                <div class="text-sm">
+                  <strong>Outcome:</strong>
+                  {{ attempt.outcome }}
+                </div>
+              {% endif %}
+
+
+              {% if attempt.notes %}
+                <div class="text-sm text-neutral-500">
+                  {{ attempt.notes }}
+                </div>
+              {% endif %}
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      {% endfor %}
+
+    {% else %}
+
+      <div class="text-sm text-neutral-500 italic">
+        No challenges recorded.
+      </div>
+
+    {% endif %}
+
+
+  {% else %}
+
+    <div class="text-sm text-neutral-500 italic">
+      No structured data recorded yet.
+    </div>
+
+  {% endif %}
+
+</div>
