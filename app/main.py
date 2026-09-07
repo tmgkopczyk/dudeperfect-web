@@ -3,14 +3,15 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from robots import router as robots_router
-from sitemap import router as sitemap_router
-from api import api as api_router
+from app.robots import router as robots_router
+from app.sitemap import router as sitemap_router
+from app.api import api as api_router
+from app.overtime.routes import router as overtime_router
 import math
 import os
 import requests
-import queries
-
+from app import queries
+from app.web import render, templates
 
 # =========================
 # App setup
@@ -571,7 +572,6 @@ def video_detail(
         },
     )
 
-
 # =========================
 # Battles
 # =========================
@@ -616,6 +616,7 @@ def battle_detail(
 
 
 app.include_router(pages)
+app.include_router(overtime_router)
 app.include_router(api_router)
 app.include_router(robots_router)
 app.include_router(sitemap_router)

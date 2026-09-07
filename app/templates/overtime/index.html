@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Overtime | Dude Perfect Fan Archive{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-10">
+
+    <div class="mb-10">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">
+            Overtime
+        </h1>
+
+        <p class="text-lg text-gray-600">
+            Explore Dude Perfect Overtime episodes, segments, items, and more.
+        </p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div class="text-3xl font-bold text-gray-900">
+                {{ stats.episode_count }}
+            </div>
+            <div class="text-gray-500 mt-1">
+                Episodes
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div class="text-3xl font-bold text-gray-900">
+                {{ stats.segment_count }}
+            </div>
+            <div class="text-gray-500 mt-1">
+                Segments
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div class="text-3xl font-bold text-gray-900">
+                {{ stats.segment_type_count }}
+            </div>
+            <div class="text-gray-500 mt-1">
+                Segment Types
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div class="text-3xl font-bold text-gray-900">
+                {{ stats.item_count }}
+            </div>
+            <div class="text-gray-500 mt-1">
+                Items
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explore -->
+    <h2 class="text-2xl font-bold text-gray-900 mb-5">
+        Explore Overtime
+    </h2>
+
+    <div class="grid md:grid-cols-2 gap-5">
+
+        <a
+            href="/overtime/items"
+            class="block bg-white border border-gray-200 rounded-xl p-6 shadow-sm
+                   hover:shadow-md hover:border-cyan-400 transition"
+        >
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                Item Search
+            </h3>
+
+            <p class="text-gray-600">
+                Search for items featured in Overtime segments,
+                including Cool Not Cool.
+            </p>
+        </a>
+
+    </div>
+
+</div>
+{% endblock %}

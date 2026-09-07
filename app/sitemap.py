@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Response
 from sqlalchemy import text
 
-from db import engine
-from queries import list_video_categories
-
+from app.db import engine
+from app.queries import list_video_categories
 
 router = APIRouter(include_in_schema=False)
 

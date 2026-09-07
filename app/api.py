@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 
-import queries
+from app import queries
 
 
 api = APIRouter(prefix="/api")

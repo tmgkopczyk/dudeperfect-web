@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Overtime {{ episode.episode_number }} - Dude Perfect Fan Archive{% endblock %}
+{% block description %}Explore the segments from Dude Perfect Overtime {{ episode.episode_number }}.{% endblock %}
+
+{% block content %}
+
+<section class="space-y-10">
+
+  <!-- Back -->
+  <a
+    href="/overtime/episodes"
+    class="inline-flex items-center text-sm text-cyan-700 hover:underline"
+  >
+    ← Overtime Episodes
+  </a>
+
+  <!-- Header -->
+  <header class="space-y-2">
+
+    <div class="text-sm font-medium uppercase tracking-wide text-neutral-400">
+      Overtime {{ episode.episode_number }}
+    </div>
+
+    <h1 class="text-3xl font-semibold text-neutral-900">
+      {{ episode.video_title }}
+    </h1>
+
+    {% if episode.published_at %}
+      <p class="text-neutral-500">
+        {{ episode.published_at.strftime('%B %d, %Y') }}
+      </p>
+    {% endif %}
+
+  </header>
+
+  <!-- Video -->
+
+
+  <!-- Segments -->
+  {% include "videos/sections/_overtime.html" %}
+
+</section>
+
+{% endblock %}

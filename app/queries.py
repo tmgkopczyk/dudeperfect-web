@@ -1,6 +1,6 @@
 from collections import defaultdict, Counter
 from sqlalchemy import text
-from db import engine
+from app.db import engine
 
 def get_battle_view(video_id: int):
     with engine.connect() as conn:
@@ -1170,6 +1170,7 @@ def get_overtime_view(video_id: int):
         return {
             "segments": formatted_segments
         }
+
 
 def get_bucket_list_view(video_id: int):
     with engine.connect() as conn:
