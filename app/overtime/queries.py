@@ -145,18 +145,25 @@ def get_overtime_segment_types():
             canonical.id,
             canonical.name,
             canonical.slug,
-            COUNT(os.id) AS segment_count
+            COUNT(os.id) AS segment_count,
+            media.media_url AS image_url,
+            media.alt_text AS image_alt
         FROM overtime_segment_types canonical
         LEFT JOIN overtime_segment_types actual
             ON actual.id = canonical.id
             OR actual.variant_of = canonical.id
         LEFT JOIN overtime_segments os
             ON os.segment_type_id = actual.id
+        LEFT JOIN overtime_segment_type_media media
+            ON media.segment_type_id = canonical.id
+            AND media.media_type = 'image'
         WHERE canonical.variant_of IS NULL
         GROUP BY
             canonical.id,
             canonical.name,
-            canonical.slug
+            canonical.slug,
+            media.media_url,
+            media.alt_text
         ORDER BY canonical.name
     """)
 

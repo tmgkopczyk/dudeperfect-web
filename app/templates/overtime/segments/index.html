@@ -20,21 +20,33 @@
         {% for segment_type in segment_types %}
             <a
                 href="/overtime/segments/{{ segment_type.slug }}"
-                class="block bg-white border border-gray-200 rounded-xl p-5 shadow-sm
+                class="block bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm
                        hover:shadow-md hover:border-cyan-400 transition"
             >
-                <h2 class="text-lg font-semibold text-gray-900">
-                    {{ segment_type.name }}
-                </h2>
+                {% if segment_type.image_url %}
+                    <div class="h-40 bg-gray-50 flex items-center justify-center p-4">
+                        <img
+                            src="{{ segment_type.image_url }}"
+                            alt="{{ segment_type.image_alt or segment_type.name }}"
+                            class="max-w-full max-h-full object-contain"
+                        >
+                    </div>
+                {% endif %}
 
-                <p class="text-sm text-gray-500 mt-1">
-                    {{ segment_type.segment_count }}
-                    {% if segment_type.segment_count == 1 %}
-                        appearance
-                    {% else %}
-                        appearances
-                    {% endif %}
-                </p>
+                <div class="p-5">
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        {{ segment_type.name }}
+                    </h2>
+
+                    <p class="text-sm text-gray-500 mt-1">
+                        {{ segment_type.segment_count }}
+                        {% if segment_type.segment_count == 1 %}
+                            appearance
+                        {% else %}
+                            appearances
+                        {% endif %}
+                    </p>
+                </div>
             </a>
         {% endfor %}
 
