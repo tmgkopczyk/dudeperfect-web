@@ -69,3 +69,64 @@ def overtime_episode_detail(
             "overtime": overtime,
         },
     )
+
+@router.get("/segments", response_class=HTMLResponse)
+def overtime_segments_page(request: Request):
+    segment_types = queries.get_overtime_segment_types()
+
+    return render(
+        request,
+        "overtime/segments/index.html",
+        {
+            "segment_types": segment_types,
+        },
+    )
+
+@router.get("/segments/{slug}", response_class=HTMLResponse)
+def overtime_segment_type_page(
+    request: Request,
+    slug: str,
+):
+    segment_type = queries.get_overtime_segment_type(slug)
+
+    if not segment_type:
+        raise HTTPException(status_code=404)
+
+    appearances = queries.get_overtime_segment_type_appearances(
+        segment_type["id"]
+    )
+    rich_appearances = []
+
+    for appearance in appearances:
+        overtime = app_queries.get_overtime_view(
+            appearance["video_id"]
+        )
+
+        if not overtime:
+            continue
+
+        segment = next(
+            (
+                segment
+                for segment in overtime["segments"]
+                if segment["segment_id"] == appearance["segment_id"]
+            ),
+            None,
+        )
+
+        if not segment:
+            continue
+
+        rich_appearances.append({
+            "appearance": appearance,
+            "segment": segment,
+        })
+
+    return render(
+        request,
+        "overtime/segments/detail.html",
+        {
+            "segment_type": segment_type,
+            "appearances": rich_appearances,
+        }
+    )

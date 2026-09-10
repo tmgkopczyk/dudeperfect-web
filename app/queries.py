@@ -411,7 +411,7 @@ def get_overtime_view(video_id: int):
                             i.id,
                             i.item_name,
                             p.name AS presenter_name
-                        FROM overtime_segment_items i
+                        FROM overtime_cool_not_cool_items i
                         LEFT JOIN players p
                           ON p.id = i.presenter_id
                         WHERE i.segment_id = :segment_id
@@ -428,7 +428,7 @@ def get_overtime_view(video_id: int):
                             SELECT
                                 pl.name AS voter_name,
                                 v.vote
-                            FROM overtime_segment_item_votes v
+                            FROM overtime_cool_not_cool_item_votes v
                             JOIN players pl
                               ON pl.id = v.voter_id
                             WHERE v.item_id = :item_id
@@ -464,6 +464,7 @@ def get_overtime_view(video_id: int):
                     })
 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": canonical_type,
                     "display_name": raw_type,
                     "items": formatted_items
@@ -496,6 +497,7 @@ def get_overtime_view(video_id: int):
                 ).mappings().all()
 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "events": [dict(e) for e in events]
                 })
@@ -534,6 +536,7 @@ def get_overtime_view(video_id: int):
                 ).mappings().all()
 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "event": dict(event) if event else None,
                     "votes": [dict(v) for v in votes]
@@ -577,6 +580,7 @@ def get_overtime_view(video_id: int):
                 ).mappings().all()
 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "event": dict(event) if event else None,
                     "participants": [dict(p) for p in participants]
@@ -622,6 +626,7 @@ def get_overtime_view(video_id: int):
                     ).mappings().all()
 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "event": dict(event) if event else None,
                     "results": [dict(r) for r in results]
@@ -644,8 +649,9 @@ def get_overtime_view(video_id: int):
                 ).mappings().first()
 
                 formatted_segments.append({
-                "segment_type": raw_type,
-                "record": dict(record) if record else None
+                    "segment_id": segment_id,
+                    "segment_type": raw_type,
+                    "record": dict(record) if record else None
                 })
                             
             elif canonical_type == "Judge Dudy":
@@ -691,6 +697,7 @@ def get_overtime_view(video_id: int):
 
                 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "case": {
                         "title": case["case_title"] if case else None,
@@ -745,6 +752,7 @@ def get_overtime_view(video_id: int):
                     ).mappings().all()
 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "event": dict(event) if event else None,
                     "entries": [
@@ -807,6 +815,7 @@ def get_overtime_view(video_id: int):
                         {"event_id": event["id"]}
                     ).mappings().all()
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "event": dict(event) if event else None,
                     "rankings": [dict(r) for r in rankings],
@@ -850,6 +859,7 @@ def get_overtime_view(video_id: int):
                     ).mappings().all()
 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "event": dict(event) if event else None,
                     "questions": [dict(q) for q in questions]
@@ -868,7 +878,7 @@ def get_overtime_view(video_id: int):
                             c2.flag_emoji AS team_b_flag,
 
                             e.notes
-                        FROM culture_clash_events e
+                        FROM overtime_culture_clash_events e
                         LEFT JOIN countries c1
                             ON c1.id = e.team_a_country_id
                         LEFT JOIN countries c2
@@ -880,7 +890,7 @@ def get_overtime_view(video_id: int):
                         "segment_id": segment["id"]
                     }
                 ).mappings().first()
-                print(event)
+                #print(event)
                 if event:
 
                     item_rows = conn.execute(
@@ -896,7 +906,7 @@ def get_overtime_view(video_id: int):
 
                                 i.points,
                                 i.notes
-                            FROM culture_clash_items i
+                            FROM overtime_culture_clash_items i
                             JOIN countries c
                                 ON c.id = i.country_id
                             WHERE i.event_id = :event_id
@@ -918,7 +928,7 @@ def get_overtime_view(video_id: int):
                                     g.guess_text,
                                     g.is_correct,
                                     g.notes
-                                FROM culture_clash_guesses g
+                                FROM overtime_culture_clash_guesses g
                                 JOIN players p
                                     ON p.id = g.player_id
                                 WHERE g.item_id = :item_id
@@ -942,6 +952,7 @@ def get_overtime_view(video_id: int):
                         })
 
                     formatted_segments.append({
+                        "segment_id": segment_id,
                         "segment_type": raw_type,
                         "event": {
                             "team_a_country": event["team_a_country"],
@@ -1029,6 +1040,7 @@ def get_overtime_view(video_id: int):
                             "members": [dict(m) for m in members]
                         })
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "event": {
                         "sponsor_name": event["sponsor_name"],
@@ -1052,6 +1064,7 @@ def get_overtime_view(video_id: int):
                 ).mappings().first()
 
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "fight_scene": dict(fight_scene) if fight_scene else None
                 })
@@ -1139,6 +1152,7 @@ def get_overtime_view(video_id: int):
                         })
 
                     formatted_segments.append({
+                        "segment_id": segment_id,
                         "segment_type": raw_type,
                         "fifty_fifty": {
                             "winner": (
@@ -1155,11 +1169,13 @@ def get_overtime_view(video_id: int):
                     })
                 else:
                     formatted_segments.append({
+                        "segment_id": segment_id,
                         "segment_type": raw_type,
                         "fifty_fifty": None,
                     })
             else:
                 formatted_segments.append({
+                    "segment_id": segment_id,
                     "segment_type": raw_type,
                     "title": segment["title"],
                     "notes": segment["notes"],

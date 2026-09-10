@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ segment_type.name }} - Overtime{% endblock %}
+
+{% block content %}
+
+<h1 class="text-2xl font-semibold text-neutral-900">
+  {{ segment_type.name }}
+</h1>
+
+<p class="mt-2 text-neutral-600">
+  {{ appearances|length }}
+  {% if appearances|length == 1 %}
+    appearance
+  {% else %}
+    appearances
+  {% endif %}
+</p>
+
+<div class="mt-8 space-y-10">
+
+  {% for item in appearances %}
+
+    {% set appearance = item.appearance %}
+
+    <section>
+
+      <div class="mb-4">
+        <h2 class="text-xl font-semibold text-neutral-900">
+          <a
+            href="/overtime/episodes/{{ appearance.episode_id }}"
+            class="hover:underline"
+          >
+            Overtime {{ appearance.episode_number }}
+          </a>
+        </h2>
+
+        <div class="text-sm text-neutral-500">
+          {{ appearance.video_title }}
+        </div>
+
+        {% if appearance.segment_type_name != segment_type.name %}
+          <div class="text-sm text-neutral-500">
+            {{ appearance.segment_type_name }}
+          </div>
+        {% endif %}
+      </div>
+        {% set overtime = {"segments": [item.segment]} %}
+        {% set show_overtime_heading = false %}
+        {% set show_overtime_divider = false %}
+        {% include "videos/sections/_overtime.html" %}
+
+    </section>
+
+  {% endfor %}
+
+</div>
+
+{% endblock %}

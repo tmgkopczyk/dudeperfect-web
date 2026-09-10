@@ -1,11 +1,16 @@
 {% if overtime and overtime.segments %}
-  <hr>
+
+  {% if show_overtime_divider is not defined or show_overtime_divider %}
+    <hr>
+  {% endif %}
 
   <section class="space-y-6">
 
-    <h2 class="text-xl font-semibold text-neutral-900">
-      Overtime Segments
-    </h2>
+    {% if show_overtime_heading is not defined or show_overtime_heading %}
+      <h2 class="text-xl font-semibold text-neutral-900">
+        Overtime Segments
+      </h2>
+    {% endif %}
 
     {% for segment in overtime.segments %}
 
