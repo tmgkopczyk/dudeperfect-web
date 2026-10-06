@@ -76,3 +76,14 @@ def test_artist_not_found():
 def test_video_not_found():
     response = client.get("/videos/999999999")
     assert response.status_code == 404
+
+def test_search_artist():
+    response = client.get("/search", params={"q": "Manic Bloom"})
+    assert response.status_code == 200
+    assert "Manic Bloom" in response.text
+
+
+def test_search_song():
+    response = client.get("/search", params={"q": "Running from the Scene"})
+    assert response.status_code == 200
+    assert "Running from the Scene" in response.text
