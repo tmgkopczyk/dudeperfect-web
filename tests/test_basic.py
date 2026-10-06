@@ -44,3 +44,35 @@ def test_robots_txt():
 def test_sitemap_xml():
     response = client.get("/sitemap.xml")
     assert response.status_code == 200
+
+def test_song_detail():
+    response = client.get("/songs/1")
+    assert response.status_code == 200
+    assert "Running from the Scene" in response.text
+
+
+def test_artist_detail():
+    response = client.get("/artists/1")
+    assert response.status_code == 200
+    assert "Manic Bloom" in response.text
+
+
+def test_video_detail():
+    response = client.get("/videos/1")
+    assert response.status_code == 200
+    assert "Aggie Skates Off Roof" in response.text
+
+
+def test_song_not_found():
+    response = client.get("/songs/999999999")
+    assert response.status_code == 404
+
+
+def test_artist_not_found():
+    response = client.get("/artists/999999999")
+    assert response.status_code == 404
+
+
+def test_video_not_found():
+    response = client.get("/videos/999999999")
+    assert response.status_code == 404
