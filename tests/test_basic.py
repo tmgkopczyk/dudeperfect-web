@@ -92,7 +92,7 @@ def test_player_detail():
     response = client.get("/player/tyler-toney")
     assert response.status_code == 200
     assert "Tyler" in response.text
-
+    assert "/player/tyler-toney/battles" in response.text
 
 def test_player_not_found():
     response = client.get("/player/definitely-not-a-real-player")
@@ -612,3 +612,17 @@ def test_video_detail_with_battle_stats():
     assert "We Played Every Sport On Go-Karts" in response.text
     assert "Battle Rounds" in response.text
     assert "Sub-rounds" in response.text
+
+def test_player_battle_history():
+    response = client.get("/player/tyler-toney/battles")
+
+    assert response.status_code == 200
+    assert "Tyler Toney Battles" in response.text
+    assert "We Played Every Sport On Go-Karts" in response.text
+    assert "Paper Airplane Battle" in response.text
+
+def test_player_battle_history_not_found():
+    response = client.get("/player/definitely-not-a-real-player/battles")
+
+    assert response.status_code == 404
+

@@ -435,6 +435,30 @@ def player_page(
         },
     )
 
+@pages.get("/player/{slug}/battles", response_class=HTMLResponse)
+def player_battles_page(
+    request: Request,
+    slug: str,
+):
+    player = queries.get_player_by_slug(slug)
+
+    if not player:
+        raise HTTPException(status_code=404)
+
+    battles = queries.get_recent_battles_for_player(
+        player["id"],
+        limit=None,
+    )
+
+    return render(
+        request,
+        "players/player_battles.html",
+        {
+            "player": player,
+            "battles": battles,
+        },
+    )
+
 
 @pages.get("/players", response_class=HTMLResponse)
 def players_index(request: Request):

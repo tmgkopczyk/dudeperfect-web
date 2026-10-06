@@ -141,6 +141,14 @@
             </a>
 
             {% endfor %}
+            <div class="mt-2 text-right">
+                <a
+                    href="{{ url_for('player_battles_page', slug=player.slug) }}"
+                    class="inline-block font-semibold hover:text-[#2EFCE6] hover:underline"
+                >
+                    View all {{ player.total_battles }} battles →
+                </a>
+            </div>
         </div>
     </div>
     {% endif %}
