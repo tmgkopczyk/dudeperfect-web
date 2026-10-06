@@ -604,3 +604,11 @@ def test_api_video_by_youtube_id():
 def test_api_video_by_youtube_id_not_found():
     response = client.get("/api/videos/youtube/definitely-not-a-real-youtube-id")
     assert response.status_code == 404
+
+def test_video_detail_with_battle_stats():
+    response = client.get("/videos/390")
+    assert response.status_code == 200
+
+    assert "We Played Every Sport On Go-Karts" in response.text
+    assert "Battle Rounds" in response.text
+    assert "Sub-rounds" in response.text

@@ -138,10 +138,13 @@ def get_battle_view(video_id: int):
             results = conn.execute(
                 text("""
                     SELECT
+                        brp.id AS participant_id,
+                        bp.id AS battle_player_id,
                         p.id AS player_id,
                         p.slug AS player_slug,
                         bt.id AS team_id,
                         COALESCE(p.name, bt.name) AS name,
+                        COALESCE(bp.accent_color, bt.accent_color) AS accent_color,
                         brp.status,
                         brp.placement,
                         brp.score,
@@ -161,72 +164,147 @@ def get_battle_view(video_id: int):
                 {"round_id": r["id"]}
             ).mappings().all()
 
+            stat_rows = conn.execute(
+                text("""
+                    SELECT
+                        brps.battle_round_participant_id AS participant_id,
+                        brps.battle_player_id,
+                        p.name AS player_name,
+                        p.slug AS player_slug,
+                        brps.stat_key,
+                        brps.stat_label,
+                        brps.stat_value,
+                        brps.display_order
+                    FROM battle_round_participant_stats brps
+                    LEFT JOIN battle_players bp
+                        ON bp.id = brps.battle_player_id
+                    LEFT JOIN players p
+                        ON p.id = bp.player_id
+                    JOIN battle_round_participants brp
+                        ON brp.id = brps.battle_round_participant_id
+                    WHERE brp.battle_round_id = :round_id
+                    ORDER BY
+                        brps.battle_round_participant_id,
+                        p.name,
+                        brps.display_order,
+                        brps.id
+                """),
+                {"round_id": r["id"]}
+            ).mappings().all()
+
+            stats_by_participant = defaultdict(lambda: {
+                "players": {},
+                "stats": []
+            })
+
+            for stat in stat_rows:
+                participant = stats_by_participant[stat["participant_id"]]
+
+                if stat["battle_player_id"] is not None:
+                    player = participant["players"].setdefault(
+                        stat["battle_player_id"],
+                        {
+                            "battle_player_id": stat["battle_player_id"],
+                            "name": stat["player_name"],
+                            "slug": stat["player_slug"],
+                            "stats": []
+                        }
+                    )
+
+                    player["stats"].append({
+                        "key": stat["stat_key"],
+                        "label": stat["stat_label"],
+                        "value": stat["stat_value"],
+                        "display_order": stat["display_order"]
+                    })
+
+                else:
+                    participant["stats"].append({
+                        "key": stat["stat_key"],
+                        "label": stat["stat_label"],
+                        "value": stat["stat_value"],
+                        "display_order": stat["display_order"]
+                    })
+
             # =====================
             # Matches
             # =====================
 
             matches = []
 
-            if r["round_type"] in ("round_robin", "elimination", "tournament"):
+            match_rows = conn.execute(
+                text("""
+                    SELECT
+                        id,
+                        match_order,
+                        title
+                    FROM battle_round_matches
+                    WHERE battle_round_id = :round_id
+                    ORDER BY match_order
+                """),
+                {"round_id": r["id"]}
+            ).mappings().all()
 
-                match_rows = conn.execute(
+            for match in match_rows:
+                participants = conn.execute(
                     text("""
                         SELECT
-                            id,
-                            match_order,
-                            title
-                        FROM battle_round_matches
-                        WHERE battle_round_id = :round_id
-                        ORDER BY match_order
+                            p.id AS player_id,
+                            p.slug AS player_slug,
+                            bt.id AS team_id,
+                            COALESCE(p.name, bt.name) AS name,
+                            brmp.placement,
+                            brmp.score,
+                            brmp.status,
+                            brmp.notes
+                        FROM battle_round_match_participants brmp
+
+                        LEFT JOIN battle_players bp
+                            ON bp.id = brmp.battle_player_id
+
+                        LEFT JOIN players p
+                            ON p.id = bp.player_id
+
+                        LEFT JOIN battle_teams bt
+                            ON bt.id = brmp.battle_team_id
+
+                        WHERE brmp.battle_round_match_id = :match_id
+
+                        ORDER BY
+                            brmp.placement NULLS LAST,
+                            COALESCE(p.name, bt.name)
                     """),
-                    {"round_id": r["id"]}
+                    {"match_id": match["id"]}
                 ).mappings().all()
 
-                for match in match_rows:
-
-                    participants = conn.execute(
-                        text("""
-                            SELECT
-                                p.id AS player_id,
-                                p.slug AS player_slug,
-                                bt.id AS team_id,
-                                COALESCE(p.name, bt.name) AS name,
-                                brmp.placement,
-                                brmp.score,
-                                brmp.status,
-                                brmp.notes
-                            FROM battle_round_match_participants brmp
-
-                            LEFT JOIN battle_players bp
-                                ON bp.id = brmp.battle_player_id
-
-                            LEFT JOIN players p
-                                ON p.id = bp.player_id
-
-                            LEFT JOIN battle_teams bt
-                                ON bt.id = brmp.battle_team_id
-
-                            WHERE brmp.battle_round_match_id = :match_id
-
-                            ORDER BY
-                                brmp.placement NULLS LAST,
-                                COALESCE(p.name, bt.name)
-                        """),
-                        {"match_id": match["id"]}
-                    ).mappings().all()
-
-                    matches.append({
-                        "id": match["id"],
-                        "match_order": match["match_order"],
-                        "title": match["title"],
-                        "participants": [
-                            dict(x) for x in participants
-                        ]
-                    })
+                matches.append({
+                    "id": match["id"],
+                    "match_order": match["match_order"],
+                    "title": match["title"],
+                    "participants": [
+                        dict(x) for x in participants
+                    ]
+                })
 
             # =====================
             # Add round to timeline
             # =====================
+
+            round_results = []
+
+            for result in results:
+                item = dict(result)
+
+                detail = stats_by_participant.get(result["participant_id"])
+
+                if detail:
+                    item["stats"] = detail["stats"]
+                    item["players"] = list(detail["players"].values())
+                else:
+                    item["stats"] = []
+                    item["players"] = []
+
+                round_results.append(item)
 
             timeline.append({
                 "id": r["id"],
@@ -234,7 +312,7 @@ def get_battle_view(video_id: int):
                 "name": r["name"],
                 "round_type": r["round_type"],
                 "score_label": r["score_label"],
-                "results": [dict(x) for x in results],
+                "results": round_results,
                 "matches": matches
             })
 

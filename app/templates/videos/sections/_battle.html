@@ -82,6 +82,7 @@
     {% endif %}
 </section>
 
+
 {% if battle.timeline %}
 <section class="space-y-4">
     <h3 class="text-lg font-medium text-neutral-900">Battle Rounds</h3>
@@ -219,58 +220,357 @@
             <!-- Normal Round              -->
             <!-- ========================= -->
 
-            <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            {% set ns = namespace(has_detailed_stats=false) %}
 
-                {% for p in round.results %}
+            {% for p in round.results %}
+                {% if p.players or p.stats %}
+                    {% set ns.has_detailed_stats = true %}
+                {% endif %}
+            {% endfor %}
 
-                    <li class="border rounded px-3 py-2 bg-white">
 
-                        <div class="flex justify-between items-center">
+            {% if ns.has_detailed_stats %}
 
-                            <span class="font-medium">
-                                {% if p.player_slug %}
-                                    <a
-                                        href="{{ url_for('player_page', slug=p.player_slug) }}"
-                                        class="hover:text-[#2EFCE6] hover:underline"
-                                    >
-                                        {{ p.name }}
-                                    </a>
-                                {% else %}
-                                    {{ p.name }}
-                                {% endif %}
-                            </span>
+                <!-- ========================= -->
+                <!-- Detailed Scoreboard       -->
+                <!-- ========================= -->
 
-                            <span class="text-neutral-700 text-right">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                    {% for p in round.results %}
+
+                        <div
+                            class="border rounded-lg bg-white overflow-hidden"
+                            {% if p.accent_color %}
+                                style="border-top: 6px solid {{ '#D1D5DB' if p.accent_color|lower == '#ffffff' else p.accent_color }};"
+                            {% endif %}
+                        >
+
+                            <!-- Participant / team header -->
+
+                            <div class="flex items-center justify-between px-4 py-3 bg-neutral-50 border-b">
+
+                                <div class="flex items-center gap-2">
+
+                                    {% if p.placement == 1 %}
+                                        <span title="Winner">🏆</span>
+                                    {% endif %}
+
+                                    <span class="font-semibold text-lg">
+                                        {% if p.player_slug %}
+                                            <a
+                                                href="{{ url_for('player_page', slug=p.player_slug) }}"
+                                                class="hover:text-[#2EFCE6] hover:underline"
+                                            >
+                                                {{ p.name }}
+                                            </a>
+                                        {% else %}
+                                            {{ p.name }}
+                                        {% endif %}
+                                    </span>
+
+                                    {% if p.placement == 1 %}
+                                        <span class="text-xs font-medium text-neutral-500 uppercase">
+                                            Winner
+                                        </span>
+                                    {% endif %}
+
+                                </div>
+
+
+                                <!-- Overall score -->
 
                                 {% if p.score is not none %}
 
-                                    {% if p.score == p.score|int %}
-                                        {{ p.score|int }}
-                                    {% else %}
-                                        {{ "%.1f"|format(p.score) }}
-                                    {% endif %}
+                                    <div class="text-right">
 
-                                    {% if round.score_label %}
-                                        {{ round.score_label }}
-                                    {% endif %}
+                                        <div class="text-2xl font-bold text-neutral-900">
+
+                                            {% if p.score == p.score|int %}
+                                                {{ p.score|int }}
+                                            {% else %}
+                                                {{ "%.1f"|format(p.score) }}
+                                            {% endif %}
+
+                                        </div>
+
+                                        {% if round.score_label %}
+                                            <div class="text-xs text-neutral-500">
+                                                {{ round.score_label }}
+                                            </div>
+                                        {% endif %}
+
+                                    </div>
 
                                 {% endif %}
 
-                            </span>
+                            </div>
+
+
+                            <!-- ========================= -->
+                            <!-- Team player statistics    -->
+                            <!-- ========================= -->
+
+                            {% if p.players %}
+
+                                <div class="divide-y">
+
+                                    {% for player in p.players %}
+
+                                        <div class="px-4 py-3">
+
+                                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+                                                <!-- Player -->
+
+                                                <div class="font-medium min-w-0">
+
+                                                    {% if player.slug %}
+                                                        <a
+                                                            href="{{ url_for('player_page', slug=player.slug) }}"
+                                                            class="hover:text-[#2EFCE6] hover:underline"
+                                                        >
+                                                            {{ player.name }}
+                                                        </a>
+                                                    {% else %}
+                                                        {{ player.name }}
+                                                    {% endif %}
+
+                                                </div>
+
+
+                                                <!-- Stats -->
+
+                                                <div class="grid grid-flow-col auto-cols-max gap-5">
+
+                                                    {% for stat in player.stats %}
+
+                                                        <div class="text-center min-w-12">
+
+                                                            <div class="font-semibold text-neutral-900">
+                                                                {{ stat.value }}
+                                                            </div>
+
+                                                            <div class="text-[11px] text-neutral-500 uppercase">
+                                                                {{ stat.label }}
+                                                            </div>
+
+                                                        </div>
+
+                                                    {% endfor %}
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- ========================= -->
+                            <!-- Participant-level stats   -->
+                            <!-- ========================= -->
+
+                            {% if p.stats %}
+
+                                <div class="px-4 py-3 border-t">
+
+                                    <div class="flex flex-wrap gap-x-6 gap-y-3">
+
+                                        {% for stat in p.stats %}
+
+                                            <div>
+
+                                                <div class="text-xs text-neutral-500">
+                                                    {{ stat.label }}
+                                                </div>
+
+                                                <div class="font-semibold">
+                                                    {{ stat.value }}
+                                                </div>
+
+                                            </div>
+
+                                        {% endfor %}
+
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if p.status %}
+
+                                <div class="px-4 py-2 border-t text-xs text-neutral-500 italic">
+                                    {{ p.status|replace('_', ' ')|title }}
+                                </div>
+
+                            {% endif %}
 
                         </div>
 
-                        {% if p.status %}
-                            <div class="mt-1 text-xs text-neutral-500 italic">
-                                {{ p.status|replace('_', ' ')|title }}
+                    {% endfor %}
+
+                </div>
+
+
+            {% else %}
+
+                <!-- ========================= -->
+                <!-- Simple results            -->
+                <!-- ========================= -->
+
+                <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+
+                    {% for p in round.results %}
+
+                        <li
+                            class="border rounded px-3 py-2 bg-white"
+                            {% if p.accent_color %}
+                                style="border-top: 6px solid {{ '#D1D5DB' if p.accent_color|lower == '#ffffff' else p.accent_color }};"
+                            {% endif %}
+                        >
+
+                            <div class="flex justify-between items-center">
+
+                                <span class="font-medium">
+
+                                    {% if p.placement == 1 %}
+                                        <span title="Winner">🏆</span>
+                                    {% endif %}
+
+                                    {% if p.player_slug %}
+                                        <a
+                                            href="{{ url_for('player_page', slug=p.player_slug) }}"
+                                            class="hover:text-[#2EFCE6] hover:underline"
+                                        >
+                                            {{ p.name }}
+                                        </a>
+                                    {% else %}
+                                        {{ p.name }}
+                                    {% endif %}
+
+                                </span>
+
+                                <span class="text-neutral-700 text-right">
+
+                                    {% if p.score is not none %}
+
+                                        {% if p.score == p.score|int %}
+                                            {{ p.score|int }}
+                                        {% else %}
+                                            {{ "%.1f"|format(p.score) }}
+                                        {% endif %}
+
+                                        {% if round.score_label %}
+                                            {{ round.score_label }}
+                                        {% endif %}
+
+                                    {% endif %}
+
+                                </span>
+
                             </div>
-                        {% endif %}
 
-                    </li>
+                            {% if p.status %}
+                                <div class="mt-1 text-xs text-neutral-500 italic">
+                                    {{ p.status|replace('_', ' ')|title }}
+                                </div>
+                            {% endif %}
 
-                {% endfor %}
+                        </li>
 
-            </ul>
+                    {% endfor %}
+
+                </ul>
+
+            {% endif %}
+
+
+            <!-- ========================= -->
+            <!-- Sub-rounds                -->
+            <!-- ========================= -->
+
+            {% if round.matches %}
+
+                <div class="pt-3 border-t space-y-3">
+
+                    <div class="text-sm font-semibold text-neutral-700">
+                        Sub-rounds
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                        {% for match in round.matches %}
+
+                            <div class="border rounded-lg bg-neutral-50 px-4 py-3">
+
+                                {% if match.title %}
+                                    <div class="font-semibold text-neutral-800 mb-2">
+                                        {{ match.title }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="space-y-2 text-sm">
+
+                                    {% for participant in match.participants %}
+
+                                        <div class="flex items-center justify-between">
+
+                                            <div class="flex items-center gap-2">
+
+                                                {% if participant.placement == 1 %}
+                                                    <span title="Winner">🏆</span>
+                                                {% endif %}
+
+                                                {% if participant.player_slug %}
+                                                    <a
+                                                        href="{{ url_for('player_page', slug=participant.player_slug) }}"
+                                                        class="font-medium hover:text-[#2EFCE6] hover:underline"
+                                                    >
+                                                        {{ participant.name }}
+                                                    </a>
+                                                {% else %}
+                                                    <span class="font-medium">
+                                                        {{ participant.name }}
+                                                    </span>
+                                                {% endif %}
+
+                                            </div>
+
+                                            {% if participant.score is not none %}
+                                                <span class="font-semibold text-neutral-900">
+
+                                                    {% if participant.score == participant.score|int %}
+                                                        {{ participant.score|int }}
+                                                    {% else %}
+                                                        {{ "%.1f"|format(participant.score) }}
+                                                    {% endif %}
+
+                                                </span>
+                                            {% endif %}
+
+                                        </div>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            {% endif %}
 
         {% endif %}
 
