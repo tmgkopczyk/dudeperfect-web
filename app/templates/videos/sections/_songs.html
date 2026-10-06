@@ -25,9 +25,7 @@
                 <a
                   href="{{ url_for('artist_detail', artist_id=artist.id) }}"
                   class="hover:text-[#2EFCE6] hover:underline"
-                >
-                  {{ artist.name }}
-                </a>{% if not loop.last %}, {% endif %}
+                >{{ artist.name }}</a>{% if not loop.last %}, {% endif %}
               {% endfor %}
 
             </div>
