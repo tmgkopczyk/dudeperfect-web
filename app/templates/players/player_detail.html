@@ -65,7 +65,7 @@
                 {% endif %}
 
                 <!-- Stats -->
-                <div class="grid gap-4"style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+                <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
 
                     <div class="rounded-xl bg-gray-100 p-4 text-center">
                         <div class="text-2xl font-bold">
@@ -141,6 +141,7 @@
             </a>
 
             {% endfor %}
+
             <div class="mt-2 text-right">
                 <a
                     href="{{ url_for('player_battles_page', slug=player.slug) }}"
@@ -152,6 +153,8 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- Recent Stereotype Appearances -->
     {% if recent_stereotype_appearances %}
     <div class="mt-10">
         <h2 class="text-2xl font-bold mb-4">
@@ -160,22 +163,34 @@
 
         <div class="grid gap-4">
             {% for appearance in recent_stereotype_appearances %}
-                <a
-                    href="{{ url_for('video_detail', video_id=appearance.video_id) }}#stereotype-{{ appearance.segment_id }}"
-                    class="block border rounded p-4 hover:border-[#2EFCE6]"
-                >
-                    <div class="font-semibold">
-                        {{ appearance.name }}
-                    </div>
 
-                    <div class="text-sm text-gray-600 mt-1">
-                        {{ appearance.theme }} Stereotypes
-                        • Segment {{ appearance.segment_order }}
-                    </div>
-                </a>
+            <a
+                href="{{ url_for('video_detail', video_id=appearance.video_id) }}#stereotype-{{ appearance.segment_id }}"
+                class="block border rounded p-4 hover:border-[#2EFCE6]"
+            >
+                <div class="font-semibold">
+                    {{ appearance.name }}
+                </div>
+
+                <div class="text-sm text-gray-600 mt-1">
+                    {{ appearance.theme }} Stereotypes
+                    • Segment {{ appearance.segment_order }}
+                </div>
+            </a>
+
             {% endfor %}
+
+            <div class="mt-2 text-right">
+                <a
+                    href="{{ url_for('player_stereotypes_page', slug=player.slug) }}"
+                    class="inline-block font-semibold hover:text-[#2EFCE6] hover:underline"
+                >
+                    View all Stereotype appearances →
+                </a>
+            </div>
         </div>
     </div>
     {% endif %}
+
 </div>
 {% endblock %}

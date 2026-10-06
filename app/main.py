@@ -459,6 +459,29 @@ def player_battles_page(
         },
     )
 
+@pages.get("/player/{slug}/stereotypes", response_class=HTMLResponse)
+def player_stereotypes_page(
+    request: Request,
+    slug: str,
+):
+    player = queries.get_player_by_slug(slug)
+
+    if not player:
+        raise HTTPException(status_code=404)
+
+    appearances = queries.get_stereotype_appearances_for_player(
+        player["id"],
+        limit=None,
+    )
+
+    return render(
+        request,
+        "players/player_stereotypes.html",
+        {
+            "player": player,
+            "appearances": appearances,
+        },
+    )
 
 @pages.get("/players", response_class=HTMLResponse)
 def players_index(request: Request):

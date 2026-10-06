@@ -93,6 +93,7 @@ def test_player_detail():
     assert response.status_code == 200
     assert "Tyler" in response.text
     assert "/player/tyler-toney/battles" in response.text
+    assert "/player/tyler-toney/stereotypes" in response.text
 
 def test_player_not_found():
     response = client.get("/player/definitely-not-a-real-player")
@@ -626,3 +627,19 @@ def test_player_battle_history_not_found():
 
     assert response.status_code == 404
 
+def test_player_stereotype_history():
+    response = client.get("/player/tyler-toney/stereotypes")
+
+    assert response.status_code == 200
+    assert "Tyler Toney Stereotype Appearances" in response.text
+    assert "206 appearances" in response.text
+    assert "The Forever Nickname" in response.text
+    assert "Golf Stereotypes" in response.text
+
+
+def test_player_stereotype_history_not_found():
+    response = client.get(
+        "/player/definitely-not-a-real-player/stereotypes"
+    )
+
+    assert response.status_code == 404

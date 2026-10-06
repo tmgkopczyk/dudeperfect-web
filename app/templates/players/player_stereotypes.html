@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{{ player.full_name }} Stereotype Appearances | Dude Perfect Fan Archive{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-10">
+
+    <div class="mb-8">
+        <a
+            href="{{ url_for('player_page', slug=player.slug) }}"
+            class="text-sm text-gray-500 hover:text-[#2EFCE6]"
+        >
+            ← Back to {{ player.name }}
+        </a>
+
+        <h1 class="text-4xl font-bold mt-3">
+            {{ player.full_name }} Stereotype Appearances
+        </h1>
+
+        <p class="text-gray-500 mt-2">
+            {{ appearances | length }} appearance{% if appearances | length != 1 %}s{% endif %}
+        </p>
+    </div>
+
+    {% if appearances %}
+
+        {% for episode in appearances | groupby("episode_number") | reverse %}
+        <section class="mb-10">
+
+            {% set first = episode.list[0] %}
+
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold">
+                    {{ first.theme }} Stereotypes
+                </h2>
+
+                <div class="text-sm text-gray-500 mt-1">
+                    Episode {{ first.episode_number }}
+                    {% if first.published_at %}
+                        • {{ first.published_at.strftime('%B %d, %Y').replace(' 0', ' ') }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid gap-3">
+                {% for appearance in episode.list %}
+                <a
+                    href="{{ url_for('video_detail', video_id=appearance.video_id) }}#stereotype-{{ appearance.segment_id }}"
+                    class="block bg-white rounded-xl shadow p-4 hover:shadow-md transition"
+                >
+                    <div class="font-semibold">
+                        {{ appearance.name }}
+                    </div>
+
+                    <div class="text-sm text-gray-500 mt-1">
+                        Segment {{ appearance.segment_order }}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+
+        </section>
+        {% endfor %}
+
+    {% else %}
+    <div class="bg-white rounded-xl shadow p-6 text-gray-500">
+        No Stereotype appearances found.
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
