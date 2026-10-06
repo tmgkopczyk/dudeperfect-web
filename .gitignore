@@ -21,3 +21,4 @@ Thumbs.db
 *.zip
 *.sql
 .idea/
+.venv/
