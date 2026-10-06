@@ -87,3 +87,13 @@ def test_search_song():
     response = client.get("/search", params={"q": "Running from the Scene"})
     assert response.status_code == 200
     assert "Running from the Scene" in response.text
+
+def test_player_detail():
+    response = client.get("/player/tyler-toney")
+    assert response.status_code == 200
+    assert "Tyler" in response.text
+
+
+def test_player_not_found():
+    response = client.get("/player/definitely-not-a-real-player")
+    assert response.status_code == 404
