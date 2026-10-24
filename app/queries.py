@@ -2077,7 +2077,8 @@ def search_videos(query: str, limit: int | None = 50):
           COUNT(DISTINCT vs.song_id) AS song_count
         FROM videos v
         LEFT JOIN video_songs vs ON vs.video_id = v.id
-        WHERE unaccent(lower(v.title))
+        WHERE v.availability_status = 'Public'
+          AND unaccent(lower(v.title))
               LIKE unaccent(lower(:q))
         GROUP BY v.id
         ORDER BY v.published_at DESC
@@ -2116,11 +2117,13 @@ def search_battles(query: str, limit: int | None = 50):
         FROM battles b
         JOIN videos v
             ON v.id = b.video_id
-        WHERE
-            unaccent(lower(v.title))
-                LIKE unaccent(lower(:q))
-            OR unaccent(lower(COALESCE(b.description, '')))
-                LIKE unaccent(lower(:q))
+        WHERE v.availability_status = 'Public'
+            AND (
+                unaccent(lower(v.title))
+                    LIKE unaccent(lower(:q))
+                OR unaccent(lower(COALESCE(b.description, '')))
+                    LIKE unaccent(lower(:q))
+            )
         ORDER BY v.published_at DESC
         LIMIT :limit;
     """)
@@ -2238,27 +2241,47 @@ def get_video_detail(video_id: int):
         for row in rows
     ]
 
+
 def get_video_detail_page(video_id: int):
     sql = text("""
         SELECT
-            v.id                AS video_id,
-            v.title             AS video_title,
-            v.youtube_video_id  AS youtube_video_id,
-            v.published_at      AS published_at,
+            v.id                      AS video_id,
+            v.title                   AS video_title,
+            v.youtube_video_id        AS youtube_video_id,
+            v.published_at            AS published_at,
+            v.original_published_date AS original_published_date,
+            v.availability_status     AS availability_status,
+            v.is_archived             AS is_archived,
+            v.metadata_source         AS metadata_source,
+            v.wayback_url             AS wayback_url,
+            v.last_verified_at        AS last_verified_at,
 
-            s.id                AS song_id,
-            s.title             AS song_title,
-            s.spotify_track_id  AS spotify_track_id,
+            s.id                      AS song_id,
+            s.title                   AS song_title,
+            s.spotify_track_id        AS spotify_track_id,
 
-            a.name              AS artist_name,
-            a.id                AS artist_id
-            FROM videos v
-            LEFT JOIN video_songs vs  ON vs.video_id = v.id
-            LEFT JOIN songs s         ON s.id = vs.song_id
-            LEFT JOIN song_artists sa ON sa.song_id = s.id
-            LEFT JOIN artists a       ON a.id = sa.artist_id
-            WHERE v.id = :video_id
-            ORDER BY COALESCE(vs.song_order, s.id), sa.artist_order
+            a.name                    AS artist_name,
+            a.id                      AS artist_id
+
+        FROM videos v
+
+        LEFT JOIN video_songs vs
+            ON vs.video_id = v.id
+
+        LEFT JOIN songs s
+            ON s.id = vs.song_id
+
+        LEFT JOIN song_artists sa
+            ON sa.song_id = s.id
+
+        LEFT JOIN artists a
+            ON a.id = sa.artist_id
+
+        WHERE v.id = :video_id
+
+        ORDER BY
+            COALESCE(vs.song_order, s.id),
+            sa.artist_order
     """)
 
     with engine.connect() as conn:
@@ -2275,6 +2298,12 @@ def get_video_detail_page(video_id: int):
         "title": rows[0]["video_title"],
         "youtube_video_id": rows[0]["youtube_video_id"],
         "published_at": rows[0]["published_at"],
+        "original_published_date": rows[0]["original_published_date"],
+        "availability_status": rows[0]["availability_status"],
+        "is_archived": rows[0]["is_archived"],
+        "metadata_source": rows[0]["metadata_source"],
+        "wayback_url": rows[0]["wayback_url"],
+        "last_verified_at": rows[0]["last_verified_at"],
         "songs": {}
     }
 
@@ -2299,7 +2328,9 @@ def get_video_detail_page(video_id: int):
             })
 
     video["songs"] = list(video["songs"].values())
+
     return video
+
 
 def get_artist_detail(artist_id: int):
     sql = text("""
@@ -2397,6 +2428,7 @@ def get_videos(limit: int | None = 50, offset: int = 0):
         FROM videos v
         LEFT JOIN video_songs vs
             ON vs.video_id = v.id
+        WHERE v.availability_status = 'Public'
         GROUP BY v.id
         ORDER BY v.published_at DESC
         LIMIT :limit
@@ -2419,6 +2451,7 @@ def get_video_count():
     sql = text("""
         SELECT COUNT(*)
         FROM videos
+        WHERE availability_status = 'Public'
     """)
 
     with engine.connect() as conn:
@@ -2435,10 +2468,11 @@ def list_videos_for_category(category_id: int, q: str | None = None):
         JOIN videos v ON v.id = vcv.video_id
         LEFT JOIN video_songs vs ON vs.video_id = v.id
         WHERE vcv.category_id = :category_id
-          AND (
-            CAST(:q AS text) IS NULL
-            OR v.title ILIKE '%' || :q || '%'
-          )
+            AND v.availability_status = 'Public'
+            AND (
+                CAST(:q AS text) IS NULL
+                OR v.title ILIKE '%' || :q || '%'
+            )
         GROUP BY v.id, vcv.rank
         ORDER BY
           vcv.rank NULLS LAST,

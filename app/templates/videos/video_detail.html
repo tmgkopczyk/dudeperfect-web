@@ -16,6 +16,18 @@
     ← Back
   </button>
 
+  <!-- Playback selection -->
+  {% set status = video.availability_status or 'Unknown' %}
+  {% set use_youtube = (
+    video.youtube_video_id
+    and status in ['Public', 'Delisted']
+  ) %}
+  {% set use_wayback = (
+    not use_youtube
+    and video.is_archived
+    and video.wayback_url
+  ) %}
+
   <!-- Title -->
   <header class="space-y-1">
 
@@ -23,7 +35,13 @@
       {{ video.title }}
     </h1>
 
-    {% if video.published_at %}
+    {% if video.original_published_date %}
+      <div class="text-sm text-neutral-500">
+        Published {{ video.original_published_date.strftime("%B") }}
+        {{ video.original_published_date.day }},
+        {{ video.original_published_date.year }}
+      </div>
+    {% elif video.published_at %}
       <div class="text-sm text-neutral-500">
         Published {{ video.published_at.strftime("%B") }}
         {{ video.published_at.day }},
@@ -31,7 +49,7 @@
       </div>
     {% endif %}
 
-    {% if video.youtube_video_id %}
+    {% if use_youtube %}
       <a
         href="https://www.youtube.com/watch?v={{ video.youtube_video_id }}"
         target="_blank"
@@ -40,34 +58,90 @@
       >
         Watch on YouTube →
       </a>
+    {% elif use_wayback %}
+      <a
+        href="{{ video.wayback_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-sm text-[#2EFCE6] hover:underline"
+      >
+        Watch archived video →
+      </a>
     {% endif %}
 
   </header>
 
 
   <!-- Video -->
-  {% if video.youtube_video_id %}
   <div class="mt-4 max-w-4xl mx-auto">
 
     <div
-      class="relative w-full overflow-hidden rounded-xl shadow-lg"
-      style="padding-bottom: 56.25%;"
+      class="relative w-full overflow-hidden rounded-xl shadow-lg bg-black"
+      style="aspect-ratio: 16 / 9;"
     >
 
-      <iframe
-        class="absolute inset-0 w-full h-full"
-        src="https://www.youtube-nocookie.com/embed/{{ video.youtube_video_id }}"
-        title="{{ video.title }}"
-        loading="lazy"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        referrerpolicy="strict-origin-when-cross-origin"
-        allowfullscreen>
-      </iframe>
+      {% if use_youtube %}
+
+        <!-- YouTube player -->
+        <iframe
+          class="absolute inset-0 w-full h-full"
+          src="https://www.youtube-nocookie.com/embed/{{ video.youtube_video_id }}"
+          title="{{ video.title }}"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+        </iframe>
+
+      {% elif use_wayback %}
+
+        <!-- Archived video player -->
+        <video
+          class="absolute inset-0 w-full h-full"
+          controls
+          preload="metadata"
+          playsinline
+        >
+          <source src="{{ video.wayback_url }}">
+          Your browser does not support HTML5 video.
+        </video>
+
+      {% else %}
+
+        <!-- Unavailable video -->
+        <div
+          class="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-6"
+        >
+          <h2 class="text-xl font-semibold">
+            Video currently unavailable
+          </h2>
+
+          <p class="mt-2 text-sm text-neutral-400">
+            {% if status == 'Private' %}
+              This video has been made private on YouTube.
+            {% elif status == 'Deleted' %}
+              This video is no longer available on YouTube.
+            {% else %}
+              Playback availability has not been confirmed.
+            {% endif %}
+          </p>
+
+          <p class="mt-2 text-sm text-neutral-400">
+            No verified archived video is currently linked.
+          </p>
+        </div>
+
+      {% endif %}
 
     </div>
 
+    {% if use_wayback %}
+      <p class="mt-3 text-center text-xs text-neutral-500">
+        Playing an archived copy from the Wayback Machine.
+      </p>
+    {% endif %}
+
   </div>
-  {% endif %}
 
 
   <!-- Tabs -->
@@ -75,6 +149,7 @@
 
     <nav class="flex gap-6 text-sm font-medium">
 
+      <!-- Overview -->
       <button
         type="button"
         id="tab-overview"
@@ -84,7 +159,7 @@
         Overview
       </button>
 
-
+      <!-- Battle -->
       {% if battle %}
       <button
         type="button"
@@ -96,7 +171,7 @@
       </button>
       {% endif %}
 
-
+      <!-- Overtime -->
       {% if overtime %}
       <button
         type="button"
@@ -108,7 +183,7 @@
       </button>
       {% endif %}
 
-
+      <!-- Bucket List -->
       {% if bucket_list %}
       <button
         type="button"
@@ -120,7 +195,7 @@
       </button>
       {% endif %}
 
-
+      <!-- Stereotypes -->
       {% if stereotypes %}
       <button
         type="button"
@@ -132,7 +207,7 @@
       </button>
       {% endif %}
 
-
+      <!-- Songs -->
       <button
         type="button"
         id="tab-songs"
@@ -211,6 +286,7 @@
 </section>
 
 
+<!-- Tab switching -->
 <script>
 function showTab(name, updateUrl = true) {
   let content = document.getElementById('tab-content-' + name);
@@ -223,28 +299,36 @@ function showTab(name, updateUrl = true) {
     activeTab = document.getElementById('tab-overview');
   }
 
+  // Update URL fragment without reloading the page.
   if (updateUrl) {
     history.replaceState(null, "", "#" + name);
   }
 
+  // Hide all tab content.
   document.querySelectorAll('.tab-content').forEach(el => {
     el.classList.add('hidden');
   });
 
+  // Reset all tab buttons.
   document.querySelectorAll('.tab-btn').forEach(el => {
     el.classList.remove('text-[#2EFCE6]');
     el.classList.remove('border-[#2EFCE6]');
   });
 
+  // Show selected tab content.
   content.classList.remove('hidden');
 
+  // Highlight selected tab.
   activeTab.classList.add('text-[#2EFCE6]');
   activeTab.classList.add('border-[#2EFCE6]');
 }
 
+
+// Initialize tabs when the page loads.
 window.addEventListener('load', () => {
   const hash = location.hash.replace('#', '');
 
+  // Support links to individual stereotypes.
   if (hash.startsWith('stereotype-')) {
     showTab('stereotypes', false);
 
@@ -257,6 +341,7 @@ window.addEventListener('load', () => {
     return;
   }
 
+  // Open the requested tab, or Overview by default.
   showTab(hash || 'overview', false);
 });
 </script>
