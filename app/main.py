@@ -483,6 +483,35 @@ def player_stereotypes_page(
         },
     )
 
+@pages.get("/head-to-head", response_class=HTMLResponse)
+def head_to_head_page(request: Request, players: str = ""):
+    all_players = queries.get_head_to_head_battle_stats()
+    by_slug = {p["slug"]: p for p in all_players}
+    requested = [slug.strip() for slug in players.split(",") if slug.strip()]
+    selected_slugs = list(dict.fromkeys(slug for slug in requested if slug in by_slug))
+    if not players:
+        selected_slugs = ["tyler-toney", "coby-cotton"]
+    selected = [by_slug[slug] for slug in selected_slugs] if 2 <= len(selected_slugs) <= 5 else []
+    metrics = [
+        ("appearances", "Battle appearances", "count"),
+        ("individual_wins", "Individual wins", "count"),
+        ("team_wins", "Team wins", "count"),
+        ("total_wins", "Unique battles won", "count"),
+        ("win_percentage", "Win rate", "percent"),
+    ]
+    leaders = {
+        key: max((p[key] for p in selected), default=None)
+        for key, _, _ in metrics
+    }
+    return render(request, "players/head_to_head.html", {
+        "all_players": all_players,
+        "selected": selected,
+        "selected_slugs": selected_slugs,
+        "metrics": metrics,
+        "leaders": leaders,
+        "selection_error": bool(players) and not selected,
+    })
+
 @pages.get("/players", response_class=HTMLResponse)
 def players_index(request: Request):
     players = queries.list_players()

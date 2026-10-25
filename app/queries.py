@@ -2708,3 +2708,56 @@ def get_video_id_by_youtube_id(youtube_video_id: str):
                 "youtube_video_id": youtube_video_id
             }
         ).scalar_one_or_none()
+
+
+# Head-to-Head: one row per original Dude Perfect member, with wins deduplicated
+# at the player + battle level (a member can have both a team and individual win).
+def get_head_to_head_battle_stats():
+    sql = text("""
+        WITH selected_players AS (
+            SELECT id, name, full_name, slug, accent_color, image_url
+            FROM players
+            WHERE slug IN ('tyler-toney', 'cory-cotton', 'coby-cotton',
+                           'cody-jones', 'garrett-hilbert')
+        ), appearances AS (
+            SELECT DISTINCT player_id, battle_id
+            FROM battle_players
+        ), individual_wins AS (
+            SELECT DISTINCT player_id, battle_id
+            FROM battle_results
+            WHERE player_id IS NOT NULL AND placement = 1
+        ), team_wins AS (
+            SELECT DISTINCT bp.player_id, bt.battle_id
+            FROM battle_results br
+            JOIN battle_teams bt ON bt.id = br.battle_team_id
+            JOIN battle_team_members btm ON btm.team_id = bt.id
+            JOIN battle_players bp ON bp.id = btm.battle_player_id
+            WHERE br.battle_team_id IS NOT NULL AND br.placement = 1
+        ), counts AS (
+            SELECT a.player_id,
+                   COUNT(*) AS appearances,
+                   COUNT(*) FILTER (WHERE iw.battle_id IS NOT NULL) AS individual_wins,
+                   COUNT(*) FILTER (WHERE tw.battle_id IS NOT NULL) AS team_wins,
+                   COUNT(*) FILTER (WHERE iw.battle_id IS NOT NULL
+                                        OR tw.battle_id IS NOT NULL) AS total_wins
+            FROM appearances a
+            LEFT JOIN individual_wins iw
+              ON iw.player_id = a.player_id AND iw.battle_id = a.battle_id
+            LEFT JOIN team_wins tw
+              ON tw.player_id = a.player_id AND tw.battle_id = a.battle_id
+            GROUP BY a.player_id
+        )
+        SELECT p.id, p.name, p.full_name, p.slug, p.accent_color, p.image_url,
+               COALESCE(c.appearances, 0) AS appearances,
+               COALESCE(c.individual_wins, 0) AS individual_wins,
+               COALESCE(c.team_wins, 0) AS team_wins,
+               COALESCE(c.total_wins, 0) AS total_wins,
+               CASE WHEN c.appearances > 0
+                    THEN ROUND(c.total_wins * 100.0 / c.appearances, 2)
+                    ELSE 0 END AS win_percentage
+        FROM selected_players p
+        LEFT JOIN counts c ON c.player_id = p.id
+        ORDER BY p.id
+    """)
+    with engine.connect() as conn:
+        return [dict(row) for row in conn.execute(sql).mappings()]

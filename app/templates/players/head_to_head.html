@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Head-to-Head | Dude Perfect Fan Archive{% endblock %}
+{% block description %}Compare battle statistics for Dude Perfect members.{% endblock %}
+{% block content %}
+<section class="mb-8">
+  <h1 class="text-3xl font-bold">⚔️ Dude Perfect Head-to-Head</h1>
+  <p class="mt-2 text-gray-600">Choose two to five members to compare their recorded battle statistics.</p>
+</section>
+<form id="head-to-head-form" method="get" action="/head-to-head" class="bg-white border rounded-xl p-5 shadow-sm mb-8">
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+    {% for p in all_players %}
+    <label class="cursor-pointer rounded-xl border-2 p-3 text-center transition hover:shadow-md {% if p.slug in selected_slugs %}bg-gray-50{% endif %}"
+           style="border-color: {{ p.accent_color or '#ccc' }};">
+      <input type="checkbox" class="player-check accent-gray-900" value="{{ p.slug }}" {% if p.slug in selected_slugs %}checked{% endif %}>
+      {% if p.image_url %}<img src="{{ p.image_url }}" alt="" class="h-20 w-20 rounded-full object-cover mx-auto mt-2" loading="lazy">{% endif %}
+      <div class="mt-2 font-semibold">{{ p.name }}</div>
+      <div class="h-1 rounded mt-2" style="background:{{ p.accent_color or '#ccc' }}"></div>
+    </label>
+    {% endfor %}
+  </div>
+  <input type="hidden" name="players" id="selected-players">
+  <div class="flex flex-wrap items-center gap-4 mt-5">
+    <button id="compare-button" type="submit" class="bg-[#1F1F1F] text-white rounded-lg px-6 py-3 font-semibold hover:bg-gray-700 disabled:opacity-40">Compare players</button>
+    <span id="selection-hint" class="text-sm text-gray-600" aria-live="polite"></span>
+  </div>
+</form>
+{% if selection_error %}
+  <p class="rounded-lg bg-amber-50 border border-amber-200 p-4">Select at least two and no more than five members.</p>
+{% endif %}
+{% if selected %}
+<section class="bg-white border rounded-xl shadow-sm overflow-hidden">
+  <div class="p-5 border-b flex flex-wrap items-center justify-between gap-3">
+    <div><h2 class="text-xl font-bold">Battle statistics</h2><p class="text-sm text-gray-500 mt-1">Based on recorded battles and first-place results.</p></div>
+    <button type="button" id="copy-link" class="text-sm border rounded-lg px-3 py-2 hover:bg-gray-50">Copy comparison link</button>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm text-center">
+      <thead><tr class="bg-gray-50">
+        <th scope="col" class="text-left px-4 py-4 sticky left-0 bg-gray-50 min-w-44">Statistic</th>
+        {% for p in selected %}
+        <th scope="col" class="px-4 py-4 min-w-32"><a href="/player/{{ p.slug }}" class="font-bold hover:underline" style="color:{{ p.accent_color or '#333' }}">{{ p.name }}</a></th>
+        {% endfor %}
+      </tr></thead>
+      <tbody>
+      {% for key, label, format in metrics %}
+        <tr class="border-t">
+          <th scope="row" class="text-left px-4 py-4 font-medium sticky left-0 bg-white">{{ label }}</th>
+          {% for p in selected %}
+          {% set is_leader = p[key] == leaders[key] %}
+          <td class="px-4 py-4 {% if is_leader %}font-bold bg-emerald-50{% endif %}">
+            {{ p[key] }}{% if format == 'percent' %}%{% endif %}{% if is_leader %} <span aria-label="Joint or sole leader" title="Joint or sole leader">🏆</span>{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="px-5 py-4 text-xs text-gray-500 border-t">Unique battles won counts each battle once per player, even if both individual and team first-place results exist. Win rate = unique battles won ÷ recorded appearances. Team wins are credited to recorded members of winning teams. Tied leaders are highlighted equally.</p>
+</section>
+{% endif %}
+<script>
+(() => {
+  const form = document.getElementById('head-to-head-form');
+  const checks = [...document.querySelectorAll('.player-check')];
+  const hidden = document.getElementById('selected-players');
+  const button = document.getElementById('compare-button');
+  const hint = document.getElementById('selection-hint');
+  function refresh() {
+    const values = checks.filter(c => c.checked).map(c => c.value);
+    hidden.value = values.join(',');
+    button.disabled = values.length < 2 || values.length > 5;
+    hint.textContent = `${values.length} selected (choose 2–5)`;
+  }
+  checks.forEach(c => c.addEventListener('change', refresh));
+  form.addEventListener('submit', e => { refresh(); if (button.disabled) e.preventDefault(); });
+  document.getElementById('copy-link')?.addEventListener('click', async e => {
+    try { await navigator.clipboard.writeText(window.location.href); e.currentTarget.textContent = 'Copied!'; }
+    catch { e.currentTarget.textContent = 'Copy from address bar'; }
+  });
+  refresh();
+})();
+</script>
+{% endblock %}
