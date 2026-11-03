@@ -2290,6 +2290,30 @@ def get_video_detail_page(video_id: int):
             {"video_id": video_id}
         ).mappings().all()
 
+        source_rows = conn.execute(
+            text("""
+                SELECT
+                    ss.song_id,
+                    ss.platform,
+                    ss.external_id,
+                    ss.url,
+                    ss.version_title,
+                    ss.match_type
+                FROM song_sources ss
+                JOIN video_songs vs
+                    ON vs.song_id = ss.song_id
+                WHERE vs.video_id = :video_id
+                ORDER BY
+                    ss.song_id,
+                    CASE ss.match_type
+                        WHEN 'exact' THEN 1
+                        WHEN 'alternative' THEN 2
+                        ELSE 3
+                    END,
+                    ss.id
+            """),
+            {"video_id": video_id}
+        ).mappings().all()
     if not rows:
         return None
 
@@ -2317,7 +2341,8 @@ def get_video_detail_page(video_id: int):
                 "id": row["song_id"],
                 "title": row["song_title"],
                 "spotify_track_id": row["spotify_track_id"],
-                "artists": []
+                "artists": [],
+                "sources": []
             }
         )
 
@@ -2326,6 +2351,19 @@ def get_video_detail_page(video_id: int):
                 "id": row["artist_id"],
                 "name": row["artist_name"],
             })
+    for row in source_rows:
+        song = video["songs"].get(row["song_id"])
+
+        if song is None:
+            continue
+
+        song["sources"].append({
+            "platform": row["platform"],
+            "external_id": row["external_id"],
+            "url": row["url"],
+            "version_title": row["version_title"],
+            "match_type": row["match_type"],
+        })
 
     video["songs"] = list(video["songs"].values())
 
@@ -2715,49 +2753,650 @@ def get_video_id_by_youtube_id(youtube_video_id: str):
 def get_head_to_head_battle_stats():
     sql = text("""
         WITH selected_players AS (
-            SELECT id, name, full_name, slug, accent_color, image_url
+            SELECT
+                id,
+                name,
+                full_name,
+                slug,
+                accent_color,
+                image_url
             FROM players
-            WHERE slug IN ('tyler-toney', 'cory-cotton', 'coby-cotton',
-                           'cody-jones', 'garrett-hilbert')
-        ), appearances AS (
-            SELECT DISTINCT player_id, battle_id
+            WHERE slug IN (
+                'tyler-toney',
+                'cory-cotton',
+                'coby-cotton',
+                'cody-jones',
+                'garrett-hilbert'
+            )
+        ),
+
+        -- ==========================================
+        -- Battle Statistics
+        -- ==========================================
+
+        appearances AS (
+            SELECT DISTINCT
+                player_id,
+                battle_id
             FROM battle_players
-        ), individual_wins AS (
-            SELECT DISTINCT player_id, battle_id
+        ),
+
+        individual_wins AS (
+            SELECT DISTINCT
+                player_id,
+                battle_id
             FROM battle_results
-            WHERE player_id IS NOT NULL AND placement = 1
-        ), team_wins AS (
-            SELECT DISTINCT bp.player_id, bt.battle_id
+            WHERE player_id IS NOT NULL
+              AND placement = 1
+        ),
+
+        team_wins AS (
+            SELECT DISTINCT
+                bp.player_id,
+                bt.battle_id
             FROM battle_results br
-            JOIN battle_teams bt ON bt.id = br.battle_team_id
-            JOIN battle_team_members btm ON btm.team_id = bt.id
-            JOIN battle_players bp ON bp.id = btm.battle_player_id
-            WHERE br.battle_team_id IS NOT NULL AND br.placement = 1
-        ), counts AS (
-            SELECT a.player_id,
-                   COUNT(*) AS appearances,
-                   COUNT(*) FILTER (WHERE iw.battle_id IS NOT NULL) AS individual_wins,
-                   COUNT(*) FILTER (WHERE tw.battle_id IS NOT NULL) AS team_wins,
-                   COUNT(*) FILTER (WHERE iw.battle_id IS NOT NULL
-                                        OR tw.battle_id IS NOT NULL) AS total_wins
+
+            JOIN battle_teams bt
+                ON bt.id = br.battle_team_id
+
+            JOIN battle_team_members btm
+                ON btm.team_id = bt.id
+
+            JOIN battle_players bp
+                ON bp.id = btm.battle_player_id
+
+            WHERE br.battle_team_id IS NOT NULL
+              AND br.placement = 1
+        ),
+
+        counts AS (
+            SELECT
+                a.player_id,
+
+                COUNT(*) AS appearances,
+
+                COUNT(*) FILTER (
+                    WHERE iw.battle_id IS NOT NULL
+                ) AS individual_wins,
+
+                COUNT(*) FILTER (
+                    WHERE tw.battle_id IS NOT NULL
+                ) AS team_wins,
+
+                COUNT(*) FILTER (
+                    WHERE iw.battle_id IS NOT NULL
+                       OR tw.battle_id IS NOT NULL
+                ) AS total_wins
+
             FROM appearances a
+
             LEFT JOIN individual_wins iw
-              ON iw.player_id = a.player_id AND iw.battle_id = a.battle_id
+                ON iw.player_id = a.player_id
+               AND iw.battle_id = a.battle_id
+
             LEFT JOIN team_wins tw
-              ON tw.player_id = a.player_id AND tw.battle_id = a.battle_id
+                ON tw.player_id = a.player_id
+               AND tw.battle_id = a.battle_id
+
             GROUP BY a.player_id
+        ),
+
+        -- ==========================================
+        -- Wheel Hosting Statistics
+        -- ==========================================
+
+        wheel_hosting AS (
+            SELECT
+                COALESCE(
+                    wh.player_id,
+                    pc.portrayed_by_player_id
+                ) AS player_id,
+
+                we.id AS wheel_event_id,
+                oe.id AS episode_id,
+                ost.id AS segment_type_id,
+                ost.variant_of
+
+            FROM overtime_wheel_hosts wh
+
+            JOIN overtime_wheel_events we
+                ON we.id = wh.wheel_event_id
+
+            JOIN overtime_segments os
+                ON os.id = we.segment_id
+
+            JOIN overtime_episodes oe
+                ON oe.id = os.episode_id
+
+            JOIN overtime_segment_types ost
+                ON ost.id = os.segment_type_id
+
+            LEFT JOIN player_characters pc
+                ON pc.id = wh.character_id
+
+            WHERE wh.verified = TRUE
+              AND (
+                  ost.id = 2
+                  OR ost.variant_of = 2
+              )
+        ),
+
+        wheel_counts AS (
+            SELECT
+                player_id,
+
+                COUNT(wheel_event_id)
+                    AS wheel_events_hosted,
+
+                COUNT(DISTINCT episode_id)
+                    AS wheel_episodes_hosted,
+
+                COUNT(wheel_event_id) FILTER (
+                    WHERE segment_type_id = 2
+                ) AS wheel_unfortunate_hosted,
+
+                COUNT(wheel_event_id) FILTER (
+                    WHERE variant_of = 2
+                ) AS wheel_variants_hosted
+
+            FROM wheel_hosting
+
+            WHERE player_id IS NOT NULL
+
+            GROUP BY player_id
+        ),
+
+        wheel_selections AS (
+            SELECT
+                selected_player_id AS player_id,
+                COUNT(*) AS wheel_times_selected
+            FROM overtime_wheel_events
+            WHERE selected_player_id IS NOT NULL
+            GROUP BY selected_player_id
+        ),
+
+        -- ==========================================
+        -- Cool Not Cool Statistics
+        -- ==========================================
+
+        cool_not_cool_item_votes AS (
+            SELECT
+                i.id,
+                i.presenter_id,
+
+                COUNT(*) FILTER (
+                    WHERE v.vote = 'cool'
+                ) AS cool_votes,
+
+                COUNT(*) FILTER (
+                    WHERE v.vote = 'not_cool'
+                ) AS not_cool_votes,
+
+                COUNT(*) FILTER (
+                    WHERE v.vote = 'both'
+                ) AS both_votes,
+
+                COUNT(*) FILTER (
+                    WHERE v.vote = 'suspended'
+                ) AS suspended_votes,
+
+                COUNT(*) FILTER (
+                    WHERE v.vote = 'na'
+                ) AS na_votes
+
+            FROM overtime_cool_not_cool_items i
+
+            LEFT JOIN overtime_cool_not_cool_item_votes v
+                ON v.item_id = i.id
+
+            GROUP BY
+                i.id,
+                i.presenter_id
+        ),
+
+        cool_not_cool_presenter_stats AS (
+            SELECT
+                presenter_id AS player_id,
+
+                COUNT(*) AS items_presented,
+
+                SUM(cool_votes) AS cool_votes_received,
+
+                SUM(not_cool_votes) AS not_cool_votes_received,
+
+                COUNT(*) FILTER (
+                    WHERE cool_votes = 5
+                      AND not_cool_votes = 0
+                      AND both_votes = 0
+                      AND suspended_votes = 0
+                      AND na_votes = 0
+                ) AS super_cool_items,
+
+                COUNT(*) FILTER (
+                    WHERE not_cool_votes = 5
+                      AND cool_votes = 0
+                      AND both_votes = 0
+                      AND suspended_votes = 0
+                      AND na_votes = 0
+                ) AS super_not_cool_items,
+
+                COUNT(*) FILTER (
+                    WHERE cool_votes > not_cool_votes
+                ) AS cool_majority_items,
+
+                COUNT(*) FILTER (
+                    WHERE not_cool_votes > cool_votes
+                ) AS not_cool_majority_items
+
+            FROM cool_not_cool_item_votes
+
+            WHERE presenter_id IS NOT NULL
+
+            GROUP BY presenter_id
+        ),
+
+        cool_not_cool_voter_stats AS (
+            SELECT
+                voter_id AS player_id,
+
+                COUNT(*) FILTER (
+                    WHERE vote = 'cool'
+                ) AS cool_votes_cast,
+
+                COUNT(*) FILTER (
+                    WHERE vote = 'not_cool'
+                ) AS not_cool_votes_cast
+
+            FROM overtime_cool_not_cool_item_votes
+
+            GROUP BY voter_id
+        ),
+
+        -- ==========================================
+        -- Betcha Statistics
+        -- ==========================================
+
+        betcha_presenter_stats AS (
+            SELECT
+                presenter_id AS player_id,
+
+                COUNT(*) AS challenges_presented,
+
+                COUNT(*) FILTER (
+                    WHERE outcome = TRUE
+                ) AS successful_challenges,
+
+                COUNT(*) FILTER (
+                    WHERE outcome = FALSE
+                ) AS failed_challenges,
+
+                ROUND(
+                    100.0 * COUNT(*) FILTER (
+                        WHERE outcome = TRUE
+                    )
+                    / NULLIF(
+                        COUNT(*) FILTER (
+                            WHERE outcome IS NOT NULL
+                        ),
+                        0
+                    ),
+                    2
+                ) AS success_rate
+
+            FROM overtime_betcha_events
+            WHERE presenter_id IS NOT NULL
+            GROUP BY presenter_id
+        ),
+
+        betcha_voter_stats AS (
+            SELECT
+                bv.voter_id AS player_id,
+
+                COUNT(*) AS predictions_made,
+
+                COUNT(*) FILTER (
+                    WHERE
+                        (bv.vote = 'agree' AND be.outcome = TRUE)
+                        OR
+                        (bv.vote = 'disagree' AND be.outcome = FALSE)
+                ) AS correct_predictions,
+
+                COUNT(*) FILTER (
+                    WHERE
+                        (bv.vote = 'agree' AND be.outcome = FALSE)
+                        OR
+                        (bv.vote = 'disagree' AND be.outcome = TRUE)
+                ) AS incorrect_predictions,
+
+                ROUND(
+                    100.0 * COUNT(*) FILTER (
+                        WHERE
+                            (bv.vote = 'agree' AND be.outcome = TRUE)
+                            OR
+                            (bv.vote = 'disagree' AND be.outcome = FALSE)
+                    )
+                    / NULLIF(
+                        COUNT(*) FILTER (
+                            WHERE be.outcome IS NOT NULL
+                        ),
+                        0
+                    ),
+                    2
+                ) AS prediction_accuracy,
+
+                COUNT(*) FILTER (
+                    WHERE bv.vote = 'agree'
+                ) AS agree_predictions,
+
+                COUNT(*) FILTER (
+                    WHERE bv.vote = 'disagree'
+                ) AS disagree_predictions
+
+            FROM overtime_betcha_votes bv
+
+            JOIN overtime_betcha_events be
+                ON be.segment_id = bv.segment_id
+
+            GROUP BY bv.voter_id
+        ),
+
+        -- ==========================================
+        -- Get Crafty Statistics
+        -- ==========================================
+
+        get_crafty_challenge_events AS (
+            SELECT
+                gce.id AS event_id,
+
+                COALESCE(
+                    gce.continued_from_event_id,
+                    gce.id
+                ) AS challenge_id,
+
+                gce.winner_id
+
+            FROM overtime_get_crafty_events gce
+        ),
+
+        get_crafty_player_events AS (
+            SELECT
+                gcp.player_id,
+                gce.event_id,
+                gce.challenge_id,
+                gce.winner_id,
+                gcp.placement
+
+            FROM overtime_get_crafty_participants gcp
+
+            JOIN get_crafty_challenge_events gce
+                ON gce.event_id = gcp.event_id
+        ),
+
+        get_crafty_final_results AS (
+            SELECT DISTINCT ON (
+                player_id,
+                challenge_id
+            )
+                player_id,
+                challenge_id,
+                winner_id,
+                placement
+
+            FROM get_crafty_player_events
+
+            ORDER BY
+                player_id,
+                challenge_id,
+                event_id DESC
+        ),
+
+        get_crafty_appearances AS (
+            SELECT
+                player_id,
+                COUNT(*) AS segment_appearances
+
+            FROM get_crafty_player_events
+
+            GROUP BY player_id
+        ),
+
+        get_crafty_stats AS (
+            SELECT
+                fr.player_id,
+
+                COUNT(*) AS challenges_participated,
+
+                COUNT(*) FILTER (
+                    WHERE fr.winner_id IS NOT NULL
+                ) AS completed_challenges,
+
+                COUNT(*) FILTER (
+                    WHERE fr.winner_id = fr.player_id
+                ) AS challenges_won,
+
+                COUNT(*) FILTER (
+                    WHERE fr.winner_id IS NOT NULL
+                      AND fr.winner_id <> fr.player_id
+                ) AS challenges_lost,
+
+                ROUND(
+                    100.0 * COUNT(*) FILTER (
+                        WHERE fr.winner_id = fr.player_id
+                    )
+                    / NULLIF(
+                        COUNT(*) FILTER (
+                            WHERE fr.winner_id IS NOT NULL
+                        ),
+                        0
+                    ),
+                    2
+                ) AS win_rate,
+
+                COUNT(*) FILTER (
+                    WHERE fr.placement = 2
+                ) AS second_place,
+
+                COUNT(*) FILTER (
+                    WHERE fr.placement = 3
+                ) AS third_place,
+
+                COUNT(*) FILTER (
+                    WHERE fr.placement BETWEEN 1 AND 3
+                ) AS podium_finishes,
+
+                ROUND(
+                    AVG(fr.placement),
+                    2
+                ) AS average_placement
+
+            FROM get_crafty_final_results fr
+
+            GROUP BY fr.player_id
         )
-        SELECT p.id, p.name, p.full_name, p.slug, p.accent_color, p.image_url,
-               COALESCE(c.appearances, 0) AS appearances,
-               COALESCE(c.individual_wins, 0) AS individual_wins,
-               COALESCE(c.team_wins, 0) AS team_wins,
-               COALESCE(c.total_wins, 0) AS total_wins,
-               CASE WHEN c.appearances > 0
-                    THEN ROUND(c.total_wins * 100.0 / c.appearances, 2)
-                    ELSE 0 END AS win_percentage
+
+        -- ==========================================
+        -- Final Player Statistics
+        -- ==========================================
+
+        SELECT
+            p.id,
+            p.name,
+            p.full_name,
+            p.slug,
+            p.accent_color,
+            p.image_url,
+
+            -- Battle Statistics
+            COALESCE(c.appearances, 0)
+                AS appearances,
+
+            COALESCE(c.individual_wins, 0)
+                AS individual_wins,
+
+            COALESCE(c.team_wins, 0)
+                AS team_wins,
+
+            COALESCE(c.total_wins, 0)
+                AS total_wins,
+
+            CASE
+                WHEN c.appearances > 0
+                THEN ROUND(
+                    c.total_wins * 100.0 / c.appearances,
+                    2
+                )
+                ELSE 0
+            END AS win_percentage,
+
+            -- Wheel Hosting Statistics
+            COALESCE(wc.wheel_events_hosted, 0)
+                AS wheel_events_hosted,
+
+            COALESCE(wc.wheel_episodes_hosted, 0)
+                AS wheel_episodes_hosted,
+
+            COALESCE(wc.wheel_unfortunate_hosted, 0)
+                AS wheel_unfortunate_hosted,
+
+            COALESCE(wc.wheel_variants_hosted, 0)
+                AS wheel_variants_hosted,
+
+            COALESCE(ws.wheel_times_selected, 0)
+                AS wheel_times_selected,
+
+            -- ==========================================
+            -- Cool Not Cool Statistics
+            -- ==========================================
+
+            COALESCE(cncp.items_presented, 0)
+                AS cnc_items_presented,
+
+            COALESCE(cncp.cool_votes_received, 0)
+                AS cnc_cool_votes_received,
+
+            COALESCE(cncp.not_cool_votes_received, 0)
+                AS cnc_not_cool_votes_received,
+
+            COALESCE(cncp.super_cool_items, 0)
+                AS cnc_super_cool_items,
+
+            COALESCE(cncp.super_not_cool_items, 0)
+                AS cnc_super_not_cool_items,
+
+            COALESCE(cncp.cool_majority_items, 0)
+                AS cnc_cool_majority_items,
+
+            COALESCE(cncp.not_cool_majority_items, 0)
+                AS cnc_not_cool_majority_items,
+
+            COALESCE(cncv.cool_votes_cast, 0)
+                AS cnc_cool_votes_cast,
+
+            COALESCE(cncv.not_cool_votes_cast, 0)
+                AS cnc_not_cool_votes_cast,
+
+            -- ==========================================
+            -- Betcha Statistics
+            -- ==========================================
+
+            COALESCE(bp.challenges_presented, 0)
+                AS betcha_challenges_presented,
+
+            COALESCE(bp.successful_challenges, 0)
+                AS betcha_successful_challenges,
+
+            COALESCE(bp.failed_challenges, 0)
+                AS betcha_failed_challenges,
+
+            COALESCE(bp.success_rate, 0)
+                AS betcha_success_rate,
+
+            COALESCE(bv.predictions_made, 0)
+                AS betcha_predictions_made,
+
+            COALESCE(bv.correct_predictions, 0)
+                AS betcha_correct_predictions,
+
+            COALESCE(bv.incorrect_predictions, 0)
+                AS betcha_incorrect_predictions,
+
+            COALESCE(bv.prediction_accuracy, 0)
+                AS betcha_prediction_accuracy,
+
+            COALESCE(bv.agree_predictions, 0)
+                AS betcha_agree_predictions,
+
+            COALESCE(bv.disagree_predictions, 0)
+                AS betcha_disagree_predictions,
+
+            -- ==========================================
+            -- Get Crafty Statistics
+            -- ==========================================
+
+            COALESCE(gca.segment_appearances, 0)
+                AS get_crafty_segment_appearances,
+
+            COALESCE(gc.challenges_participated, 0)
+                AS get_crafty_challenges_participated,
+
+            COALESCE(gc.completed_challenges, 0)
+                AS get_crafty_completed_challenges,
+
+            COALESCE(gc.challenges_won, 0)
+                AS get_crafty_challenges_won,
+
+            COALESCE(gc.challenges_lost, 0)
+                AS get_crafty_challenges_lost,
+
+            COALESCE(gc.win_rate, 0)
+                AS get_crafty_win_rate,
+
+            COALESCE(gc.second_place, 0)
+                AS get_crafty_second_place,
+
+            COALESCE(gc.third_place, 0)
+                AS get_crafty_third_place,
+
+            COALESCE(gc.podium_finishes, 0)
+                AS get_crafty_podium_finishes,
+
+            COALESCE(gc.average_placement, 0)
+                AS get_crafty_average_placement
+
         FROM selected_players p
-        LEFT JOIN counts c ON c.player_id = p.id
+
+        LEFT JOIN counts c
+            ON c.player_id = p.id
+
+        LEFT JOIN wheel_counts wc
+            ON wc.player_id = p.id
+
+        LEFT JOIN wheel_selections ws
+            ON ws.player_id = p.id
+
+        LEFT JOIN cool_not_cool_presenter_stats cncp
+            ON cncp.player_id = p.id
+
+        LEFT JOIN cool_not_cool_voter_stats cncv
+            ON cncv.player_id = p.id
+
+        LEFT JOIN betcha_presenter_stats bp
+            ON bp.player_id = p.id
+
+        LEFT JOIN betcha_voter_stats bv
+            ON bv.player_id = p.id
+
+        LEFT JOIN get_crafty_appearances gca
+            ON gca.player_id = p.id
+
+        LEFT JOIN get_crafty_stats gc
+            ON gc.player_id = p.id
+
         ORDER BY p.id
     """)
+
     with engine.connect() as conn:
-        return [dict(row) for row in conn.execute(sql).mappings()]
+        return [
+            dict(row)
+            for row in conn.execute(sql).mappings()
+        ]

@@ -1,52 +1,140 @@
 {% extends "base.html" %}
+
 {% block title %}Head-to-Head | Dude Perfect Fan Archive{% endblock %}
-{% block description %}Compare battle statistics for Dude Perfect members.{% endblock %}
+
+{% block description %}Compare Dude Perfect members across Battles, Wheel Unfortunate, Cool Not Cool, Betcha, and Get Crafty statistics.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='/css/head-to-head.css') }}?v={{ static_version('css/head-to-head.css') }}">
+{% endblock %}
+
 {% block content %}
 <section class="mb-8">
   <h1 class="text-3xl font-bold">⚔️ Dude Perfect Head-to-Head</h1>
-  <p class="mt-2 text-gray-600">Choose two to five members to compare their recorded battle statistics.</p>
+  <p class="mt-2 text-gray-600">
+    Choose two to five Dude Perfect members to compare their
+    Battle, Wheel Unfortunate, Cool Not Cool, Betcha,
+    and Get Crafty statistics.
+  </p>
 </section>
-<form id="head-to-head-form" method="get" action="/head-to-head" class="bg-white border rounded-xl p-5 shadow-sm mb-8">
+<form id="head-to-head-form" method="get" action="/head-to-head"
+      class="bg-white border rounded-xl p-5 shadow-sm mb-8">
+
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+
     {% for p in all_players %}
-    <label class="cursor-pointer rounded-xl border-2 p-3 text-center transition hover:shadow-md {% if p.slug in selected_slugs %}bg-gray-50{% endif %}"
-           style="border-color: {{ p.accent_color or '#ccc' }};">
-      <input type="checkbox" class="player-check accent-gray-900" value="{{ p.slug }}" {% if p.slug in selected_slugs %}checked{% endif %}>
-      {% if p.image_url %}<img src="{{ p.image_url }}" alt="" class="h-20 w-20 rounded-full object-cover mx-auto mt-2" loading="lazy">{% endif %}
-      <div class="mt-2 font-semibold">{{ p.name }}</div>
-      <div class="h-1 rounded mt-2" style="background:{{ p.accent_color or '#ccc' }}"></div>
+    <label
+      class="cursor-pointer rounded-xl border-2 p-3 text-center transition hover:shadow-md flex flex-col items-center {% if p.slug in selected_slugs %}bg-gray-50{% endif %}"
+      style="border-color: {{ p.accent_color or '#ccc' }};"
+    >
+
+      <input
+        type="checkbox"
+        class="player-check accent-gray-900"
+        value="{{ p.slug }}"
+        {% if p.slug in selected_slugs %}checked{% endif %}
+      >
+
+      <!-- Player image -->
+      <div class="w-full h-28 flex items-center justify-center mt-2">
+        {% if p.image_url %}
+        <img
+          src="{{ p.image_url }}"
+          alt="{{ p.name }}"
+          class="max-w-full max-h-full object-contain"
+          loading="lazy"
+        >
+        {% endif %}
+      </div>
+
+      <!-- Player name -->
+      <div class="mt-2 font-semibold">
+        {{ p.name }}
+      </div>
+
+      <!-- Player accent color -->
+      <div
+        class="h-1 w-full rounded mt-auto"
+        style="background: {{ p.accent_color or '#ccc' }};"
+      ></div>
+
     </label>
     {% endfor %}
+
   </div>
+
   <input type="hidden" name="players" id="selected-players">
+
   <div class="flex flex-wrap items-center gap-4 mt-5">
-    <button id="compare-button" type="submit" class="bg-[#1F1F1F] text-white rounded-lg px-6 py-3 font-semibold hover:bg-gray-700 disabled:opacity-40">Compare players</button>
-    <span id="selection-hint" class="text-sm text-gray-600" aria-live="polite"></span>
+    <button
+      id="compare-button"
+      type="submit"
+      class="bg-[#1F1F1F] text-white rounded-lg px-6 py-3 font-semibold hover:bg-gray-700 disabled:opacity-40"
+    >
+      Compare players
+    </button>
+
+    <span
+      id="selection-hint"
+      class="text-sm text-gray-600"
+      aria-live="polite"
+    ></span>
   </div>
+
 </form>
 {% if selection_error %}
   <p class="rounded-lg bg-amber-50 border border-amber-200 p-4">Select at least two and no more than five members.</p>
 {% endif %}
 {% if selected %}
-<section class="bg-white border rounded-xl shadow-sm overflow-hidden">
+<section class="bg-white border rounded-xl shadow-sm">
   <div class="p-5 border-b flex flex-wrap items-center justify-between gap-3">
-    <div><h2 class="text-xl font-bold">Battle statistics</h2><p class="text-sm text-gray-500 mt-1">Based on recorded battles and first-place results.</p></div>
+    <div>
+      <h2 class="text-xl font-bold">Player Statistics</h2>
+      <p class="text-sm text-gray-500 mt-1">
+        Compare recorded Battle, Wheel, Cool Not Cool, Betcha, and Get Crafty statistics.
+      </p>
+    </div>
     <button type="button" id="copy-link" class="text-sm border rounded-lg px-3 py-2 hover:bg-gray-50">Copy comparison link</button>
   </div>
-  <div class="overflow-x-auto">
+  <div id="active-category-header"
+     class="active-category-header"
+     aria-hidden="true"></div>
+  <div class="head-to-head-table-wrapper">
     <table class="min-w-full text-sm text-center">
-      <thead><tr class="bg-gray-50">
-        <th scope="col" class="text-left px-4 py-4 sticky left-0 bg-gray-50 min-w-44">Statistic</th>
-        {% for p in selected %}
-        <th scope="col" class="px-4 py-4 min-w-32"><a href="/player/{{ p.slug }}" class="font-bold hover:underline" style="color:{{ p.accent_color or '#333' }}">{{ p.name }}</a></th>
-        {% endfor %}
-      </tr></thead>
-      <tbody>
-      {% for key, label, format in metrics %}
+      <thead>
+        <tr class="bg-gray-50">
+          <th scope="col"
+              class="sticky top-0 z-30 text-left px-4 py-4 bg-gray-50 min-w-44">
+            Statistic
+          </th>
+
+          {% for p in selected %}
+          <th scope="col"
+              class="sticky top-0 z-20 px-4 py-4 min-w-32 bg-gray-50">
+            <a href="/player/{{ p.slug }}"
+              class="font-bold hover:underline"
+              style="color:{{ p.accent_color or '#333' }}">
+              <div class="mt-2 mb-3 font-semibold">
+                {{ p.name }}
+              </div>
+            </a>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody class="comparison-category">
+        <tr class="category-header bg-gray-100">
+          <th colspan="{{ selected|length + 1 }}"
+              class="text-left px-4 py-3 font-bold text-gray-800">
+            🏆 Battle Statistics
+          </th>
+        </tr>
+
+        {% for key, label, format in battle_metrics %}
         <tr class="border-t">
           <th scope="row" class="text-left px-4 py-4 font-medium sticky left-0 bg-white">{{ label }}</th>
           {% for p in selected %}
-          {% set is_leader = p[key] == leaders[key] %}
+          {% set is_leader = p[key] == leaders[key] and p[key] > 0 %}
           <td class="px-4 py-4 {% if is_leader %}font-bold bg-emerald-50{% endif %}">
             {{ p[key] }}{% if format == 'percent' %}%{% endif %}{% if is_leader %} <span aria-label="Joint or sole leader" title="Joint or sole leader">🏆</span>{% endif %}
           </td>
@@ -54,9 +142,402 @@
         </tr>
       {% endfor %}
       </tbody>
+      <tbody class="comparison-category">
+        <tr class="category-header bg-gray-100 border-t-2">
+        <th colspan="{{ selected|length + 1 }}" class="text-left px-4 py-3 font-bold text-gray-800">
+          🎡 Wheel Unfortunate / Fortunate
+        </th>
+      </tr>
+
+      {% for key, label, format in wheel_metrics %}
+      <tr class="border-t">
+        <th scope="row"
+            class="text-left px-4 py-4 font-medium sticky left-0 bg-white">
+          {{ label }}
+        </th>
+
+        {% for p in selected %}
+          {% set is_leader = p[key] == leaders[key] and p[key] > 0 %}
+
+          <td class="px-4 py-4 {% if is_leader %}font-bold bg-emerald-50{% endif %}">
+            {{ p[key] }}
+
+            {% if is_leader %}
+              <span aria-label="Joint or sole leader"
+                    title="Joint or sole leader">🏆</span>
+            {% endif %}
+          </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+
+      <!-- ====================================== -->
+      <!-- Cool Not Cool Statistics              -->
+      <!-- ====================================== -->
+
+      </tbody>
+      <tbody class="comparison-category">
+      <tr class="category-header bg-gray-100 border-t-2">
+        <th colspan="{{ selected|length + 1 }}"
+            class="text-left px-4 py-3 font-bold text-gray-800">
+          👍 Cool Not Cool
+        </th>
+      </tr>
+
+      {% for key, label, format in cool_not_cool_metrics %}
+      <tr class="border-t">
+        <th scope="row"
+            class="text-left px-4 py-4 font-medium sticky left-0 bg-white">
+          {{ label }}
+        </th>
+
+        {% for p in selected %}
+
+          {% set lower_is_better = key in [
+            'cnc_super_not_cool_items',
+            'cnc_not_cool_majority_items',
+            'cnc_not_cool_votes_received'
+          ] %}
+
+          {% set neutral_metric = key in [
+            'cnc_items_presented',
+            'cnc_cool_votes_cast',
+            'cnc_not_cool_votes_cast'
+          ] %}
+
+          {% if lower_is_better %}
+            {% set best_value = selected | map(attribute=key) | min %}
+          {% else %}
+            {% set best_value = leaders[key] %}
+          {% endif %}
+
+          {% set is_leader = (
+            not neutral_metric
+            and p[key] == best_value
+            and (lower_is_better or p[key] > 0)
+          ) %}
+
+          <td class="px-4 py-4 {% if is_leader %}font-bold bg-emerald-50{% endif %}">
+            {{ p[key] }}
+
+            {% if is_leader %}
+              <span aria-label="Joint or sole leader"
+                    title="Joint or sole leader">🏆</span>
+            {% endif %}
+          </td>
+
+        {% endfor %}
+      </tr>
+      {% endfor %}
+
+            <!-- ====================================== -->
+      <!-- Betcha Statistics                     -->
+      <!-- ====================================== -->
+
+      </tbody>
+      <tbody class="comparison-category">
+      <tr class="category-header bg-gray-100 border-t-2">
+        <th colspan="{{ selected|length + 1 }}"
+            class="text-left px-4 py-3 font-bold text-gray-800">
+          🎯 Betcha
+        </th>
+      </tr>
+
+      {% for key, label, format in betcha_metrics %}
+
+      {% set presenter_metric = key in [
+        'betcha_successful_challenges',
+        'betcha_failed_challenges',
+        'betcha_success_rate'
+      ] %}
+
+      {% set prediction_metric = key in [
+        'betcha_correct_predictions',
+        'betcha_incorrect_predictions',
+        'betcha_prediction_accuracy'
+      ] %}
+
+      {% set lower_is_better = key in [
+        'betcha_failed_challenges',
+        'betcha_incorrect_predictions'
+      ] %}
+
+      {% set neutral_metric = key in [
+        'betcha_challenges_presented',
+        'betcha_predictions_made',
+        'betcha_agree_predictions',
+        'betcha_disagree_predictions'
+      ] %}
+
+      {% if presenter_metric %}
+        {% set eligible_players = selected
+            | selectattr('betcha_challenges_presented', 'gt', 0)
+            | list %}
+      {% elif prediction_metric %}
+        {% set eligible_players = selected
+            | selectattr('betcha_predictions_made', 'gt', 0)
+            | list %}
+      {% else %}
+        {% set eligible_players = selected %}
+      {% endif %}
+
+      {% if eligible_players %}
+        {% if lower_is_better %}
+          {% set best_value = eligible_players | map(attribute=key) | min %}
+        {% else %}
+          {% set best_value = eligible_players | map(attribute=key) | max %}
+        {% endif %}
+      {% else %}
+        {% set best_value = none %}
+      {% endif %}
+
+      <tr class="border-t">
+        <th scope="row"
+            class="text-left px-4 py-4 font-medium sticky left-0 bg-white">
+          {{ label }}
+        </th>
+
+        {% for p in selected %}
+
+          {% set has_participated = (
+            p.betcha_challenges_presented > 0
+            if presenter_metric
+            else (
+              p.betcha_predictions_made > 0
+              if prediction_metric
+              else true
+            )
+          ) %}
+
+          {% set is_leader = (
+            not neutral_metric
+            and has_participated
+            and best_value is not none
+            and p[key] == best_value
+            and (lower_is_better or p[key] > 0)
+          ) %}
+
+          <td class="px-4 py-4 {% if is_leader %}font-bold bg-emerald-50{% endif %}">
+
+            {% if format == 'percent' and not has_participated %}
+              —
+            {% else %}
+              {{ p[key] }}{% if format == 'percent' %}%{% endif %}
+            {% endif %}
+
+            {% if is_leader %}
+              <span aria-label="Joint or sole leader"
+                    title="Joint or sole leader">🏆</span>
+            {% endif %}
+
+          </td>
+
+        {% endfor %}
+      </tr>
+
+      {% endfor %}
+
+            <!-- ====================================== -->
+      <!-- Get Crafty Statistics                 -->
+      <!-- ====================================== -->
+
+      </tbody>
+      <tbody class="comparison-category">
+      <tr class="category-header bg-gray-100 border-t-2">
+        <th colspan="{{ selected|length + 1 }}"
+            class="text-left px-4 py-3 font-bold text-gray-800">
+          🎨 Get Crafty
+        </th>
+      </tr>
+
+      {% for key, label, format in get_crafty_metrics %}
+
+        {% set neutral_metric = key in [
+          'get_crafty_segment_appearances',
+          'get_crafty_challenges_participated',
+          'get_crafty_completed_challenges',
+          'get_crafty_challenges_lost'
+        ] %}
+
+        {% set lower_is_better = key in [
+          'get_crafty_average_placement'
+        ] %}
+
+        {% set requires_completed = key in [
+          'get_crafty_win_rate'
+        ] %}
+
+        {% set requires_placement = key in [
+          'get_crafty_average_placement'
+        ] %}
+
+        {% if requires_completed %}
+          {% set eligible_players = selected
+              | selectattr('get_crafty_completed_challenges', 'gt', 0)
+              | list %}
+        {% elif requires_placement %}
+          {% set eligible_players = selected
+              | selectattr('get_crafty_challenges_participated', 'gt', 0)
+              | list %}
+        {% else %}
+          {% set eligible_players = selected %}
+        {% endif %}
+
+        {% if eligible_players %}
+          {% if lower_is_better %}
+            {% set best_value = eligible_players | map(attribute=key) | min %}
+          {% else %}
+            {% set best_value = eligible_players | map(attribute=key) | max %}
+          {% endif %}
+        {% else %}
+          {% set best_value = none %}
+        {% endif %}
+
+        <tr class="border-t">
+          <th scope="row"
+              class="text-left px-4 py-4 font-medium sticky left-0 bg-white">
+            {{ label }}
+          </th>
+
+          {% for p in selected %}
+
+            {% set has_participated = (
+              p.get_crafty_completed_challenges > 0
+              if requires_completed
+              else (
+                p.get_crafty_challenges_participated > 0
+                if requires_placement
+                else true
+              )
+            ) %}
+
+            {% set is_leader = (
+              not neutral_metric
+              and has_participated
+              and best_value is not none
+              and p[key] == best_value
+              and (lower_is_better or p[key] > 0)
+            ) %}
+
+            <td class="px-4 py-4 {% if is_leader %}font-bold bg-emerald-50{% endif %}">
+
+              {% if not has_participated %}
+                —
+              {% else %}
+                {{ p[key] }}{% if format == 'percent' %}%{% endif %}
+              {% endif %}
+
+              {% if is_leader %}
+                <span aria-label="Joint or sole leader"
+                      title="Joint or sole leader">🏆</span>
+              {% endif %}
+
+            </td>
+
+          {% endfor %}
+        </tr>
+
+      {% endfor %}
+      </tbody>
     </table>
   </div>
-  <p class="px-5 py-4 text-xs text-gray-500 border-t">Unique battles won counts each battle once per player, even if both individual and team first-place results exist. Win rate = unique battles won ÷ recorded appearances. Team wins are credited to recorded members of winning teams. Tied leaders are highlighted equally.</p>
+  <p class="px-5 py-4 text-xs text-gray-500 border-t">
+    <strong>Battle statistics:</strong>
+    Unique battles won counts each battle once per player, even if both
+    individual and team first-place results exist. Win rate =
+    unique battles won ÷ recorded appearances. Team wins are credited
+    to recorded members of winning teams.
+
+    <br><br>
+
+    <strong>Wheel Unfortunate / Fortunate:</strong>
+    Counts how many times each player was selected by the wheel and how many
+    verified Wheel events they hosted. Hosting appearances include characters
+    portrayed by the players. Wheel events and episodes are counted separately
+    because an episode may contain multiple Wheel events. Wheel Fortunate is
+    counted as a Wheel variant. Being selected does not necessarily mean the
+    player hosted or spun the wheel.
+
+    <br><br>
+
+    <strong>Cool Not Cool:</strong>
+    Items presented counts the products or experiences each player
+    introduced during Cool Not Cool.
+
+    Cool and Not Cool votes received are counted from votes on
+    that player's presented items.
+
+    Super Cool requires five Cool votes, while Super Not Cool
+    requires five Not Cool votes.
+
+    Cool-majority and Not Cool-majority items are determined
+    by comparing the number of Cool and Not Cool votes received.
+
+    Votes cast represent how each player voted on items,
+    regardless of who presented them.
+
+    Special vote values such as Both, Suspended, and N/A
+    are excluded from Cool and Not Cool vote totals.
+
+    <br><br>
+
+    <strong>Statistical leaders:</strong>
+    Higher values are highlighted for positive performance statistics,
+    while lower values are highlighted for negative outcomes.
+    Neutral statistics do not receive trophies.
+    Tied leaders with nonzero values are highlighted equally.
+
+    <br><br>
+
+    <strong>Betcha:</strong>
+    Challenges presented counts the Betcha challenges introduced
+    by each player.
+
+    Successful and failed challenges are determined by the
+    recorded outcome.
+
+    Challenge success rate is calculated as successful challenges
+    divided by challenges with known outcomes.
+
+    Agree predictions indicate that a player expected the challenge
+    to succeed, while Disagree predictions indicate that they
+    expected it to fail.
+
+    Correct predictions match the recorded outcome.
+    Prediction accuracy is calculated from predictions with
+    known outcomes.
+
+    Players without recorded challenges or predictions display
+    a dash instead of a percentage.
+    
+    <br><br>
+
+    <strong>Get Crafty:</strong>
+    Segment appearances count every recorded Get Crafty event
+    in which a player participated.
+
+    Challenges participated counts unique competitions.
+    Multi-part challenges, such as Egg Drop Parts 1 and 2,
+    are counted as one competition.
+
+    Completed challenges are competitions with a recorded winner.
+
+    Challenges won and lost are determined by the recorded
+    final winner.
+
+    Win rate is calculated as challenges won divided by
+    completed challenges.
+
+    Second-place, third-place, and podium finishes are
+    determined by recorded final placements.
+
+    Average placement is calculated from recorded final
+    placements, with lower values indicating better results.
+
+    Players without eligible results display a dash for
+    win rate or average placement.
+
+  </p>
 </section>
 {% endif %}
 <script>
@@ -79,6 +560,93 @@
     catch { e.currentTarget.textContent = 'Copy from address bar'; }
   });
   refresh();
+
+  // Keep the category headings directly below the player headings.
+  // ==========================================
+  // Active Category Indicator
+  // ==========================================
+
+  const tableWrapper = document.querySelector(
+      '.head-to-head-table-wrapper'
+  );
+
+  const table = tableWrapper?.querySelector('table');
+  const playerHeader = table?.querySelector('thead');
+
+  const categoryRows = [
+      ...(table?.querySelectorAll('.category-header') || [])
+  ];
+
+  const activeCategory = document.getElementById(
+      'active-category-header'
+  );
+
+  let updateQueued = false;
+
+  function updateActiveCategory() {
+      updateQueued = false;
+
+      if (
+          !table ||
+          !playerHeader ||
+          !activeCategory ||
+          !categoryRows.length
+      ) {
+          return;
+      }
+
+      const headerHeight = playerHeader.getBoundingClientRect().height;
+      const tableRect = table.getBoundingClientRect();
+
+      const barHeight = activeCategory.offsetHeight || 44;
+
+      const show = tableRect.top <= 0 && tableRect.bottom > headerHeight + barHeight;
+
+      activeCategory.classList.toggle('is-visible', show);
+
+      if (!show) return;
+
+      let current = categoryRows[0];
+
+      for (const row of categoryRows) {
+          if (
+              row.getBoundingClientRect().top <=
+              headerHeight + barHeight
+          ) {
+              current = row;
+          } else {
+              break;
+          }
+      }
+
+      activeCategory.textContent =
+          current.querySelector('th')?.textContent.trim() || '';
+
+      activeCategory.style.top = `${headerHeight}px`;
+      activeCategory.style.left = `${tableRect.left}px`;
+      activeCategory.style.width = `${tableRect.width}px`;
+  }
+
+  function requestCategoryUpdate() {
+      if (updateQueued) return;
+
+      updateQueued = true;
+
+      requestAnimationFrame(updateActiveCategory);
+  }
+
+  window.addEventListener(
+      'scroll',
+      requestCategoryUpdate,
+      { passive: true }
+  );
+
+  window.addEventListener(
+      'resize',
+      requestCategoryUpdate
+  );
+
+  requestCategoryUpdate();
 })();
 </script>
 {% endblock %}

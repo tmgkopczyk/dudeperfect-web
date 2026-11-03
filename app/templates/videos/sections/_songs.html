@@ -1,3 +1,4 @@
+
 <section class="space-y-3">
 
   <h2 class="text-xl font-medium text-neutral-900">
@@ -9,24 +10,79 @@
     <ul class="space-y-3">
 
       {% for song in video.songs %}
-        <li class="border border-gray-200 rounded p-3 hover:bg-gray-50 transition">
+        <li class="border border-gray-200 rounded p-3 hover:bg-gray-50 transition space-y-2">
 
-          <a
-            href="{{ url_for('song_detail', song_id=song.id) }}"
-            class="font-semibold hover:text-[#2EFCE6]"
-          >
-            {{ song.title }}
-          </a>
+          <div>
+            <a
+              href="{{ url_for('song_detail', song_id=song.id) }}"
+              class="font-semibold hover:text-[#2EFCE6]"
+            >
+              {{ song.title }}
+            </a>
 
-          {% if song.artists %}
-            <div class="text-sm text-neutral-600">
+            {% if song.artists %}
+              <div class="text-sm text-neutral-600">
 
-              {% for artist in song.artists %}
-                <a
-                  href="{{ url_for('artist_detail', artist_id=artist.id) }}"
-                  class="hover:text-[#2EFCE6] hover:underline"
-                >{{ artist.name }}</a>{% if not loop.last %}, {% endif %}
+                {% for artist in song.artists %}
+                  <a
+                    href="{{ url_for('artist_detail', artist_id=artist.id) }}"
+                    class="hover:text-[#2EFCE6] hover:underline"
+                  >{{ artist.name }}</a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+
+              </div>
+            {% endif %}
+          </div>
+
+          {% if song.sources %}
+            <div class="space-y-2 pt-2 border-t border-gray-100">
+
+              {% for source in song.sources %}
+                <div class="flex flex-wrap items-center gap-2 text-sm">
+
+                  <a
+                    href="{{ source.url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="font-medium text-blue-700 hover:underline"
+                  >
+                    {{ source.version_title or song.title }}
+                  </a>
+
+                  <span class="text-neutral-500">
+                    {{ source.platform | capitalize }}
+                  </span>
+
+                  {% if source.match_type == 'exact' %}
+                    <span class="text-xs font-medium text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
+                      Exact recording
+                    </span>
+                  {% elif source.match_type == 'alternative' %}
+                    <span class="text-xs text-neutral-600 bg-gray-100 px-2 py-0.5 rounded-full">
+                      Alternative version
+                    </span>
+                  {% else %}
+                    <span class="text-xs text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                      Unverified
+                    </span>
+                  {% endif %}
+
+                </div>
               {% endfor %}
+
+              {% if song.spotify_track_id %}
+                <a
+                  href="https://open.spotify.com/track/{{ song.spotify_track_id }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-block text-sm text-green-700 hover:underline"
+                >
+                  Listen on Spotify
+                  {% if song.sources | selectattr('match_type', 'equalto', 'exact') | list %}
+                    (alternative version)
+                  {% endif %}
+                </a>
+              {% endif %}
 
             </div>
           {% endif %}

@@ -1,0 +1,59 @@
+/* ==========================================
+   Head-to-Head Table
+   ========================================== */
+
+.head-to-head-table-wrapper {
+    overflow: visible;
+}
+
+/* ==========================================
+   Sticky Player Headers
+   ========================================== */
+
+.head-to-head-table-wrapper thead th {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background-color: #f9fafb;
+    box-shadow: 0 1px 0 #e5e7eb;
+}
+
+.head-to-head-table-wrapper thead th:first-child {
+    z-index: 40;
+}
+
+/* ==========================================
+   Regular Category Headers
+   ========================================== */
+
+.head-to-head-table-wrapper .category-header th {
+    position: static;
+    background-color: #f3f4f6;
+}
+
+/* ==========================================
+   Floating Category Indicator
+   ========================================== */
+
+#active-category-header {
+    display: none;
+    position: fixed;
+    z-index: 25;
+
+    box-sizing: border-box;
+    padding: 12px 16px;
+
+    background-color: #f3f4f6;
+    color: #1f2937;
+
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+
+    box-shadow: 0 1px 0 #d1d5db;
+    pointer-events: none;
+}
+
+#active-category-header.is-visible {
+    display: block;
+}

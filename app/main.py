@@ -11,7 +11,7 @@ import math
 import os
 import requests
 from app import queries
-from app.web import render, templates
+
 
 # =========================
 # App setup
@@ -35,6 +35,29 @@ app.mount(
     name="static",
 )
 
+# ==========================================
+# Static Asset Cache Busting
+# ==========================================
+
+STATIC_DIR = BASE_DIR / "static"
+
+
+def static_version(filename: str) -> int:
+    """
+    Return the file's modification timestamp.
+
+    When a static file changes, its version changes,
+    forcing browsers to request the updated asset.
+    """
+    path = STATIC_DIR / filename
+
+    try:
+        return path.stat().st_mtime_ns
+    except FileNotFoundError:
+        return 0
+
+
+templates.env.globals["static_version"] = static_version
 
 # =========================
 # Routers
@@ -486,28 +509,126 @@ def player_stereotypes_page(
 @pages.get("/head-to-head", response_class=HTMLResponse)
 def head_to_head_page(request: Request, players: str = ""):
     all_players = queries.get_head_to_head_battle_stats()
+
     by_slug = {p["slug"]: p for p in all_players}
-    requested = [slug.strip() for slug in players.split(",") if slug.strip()]
-    selected_slugs = list(dict.fromkeys(slug for slug in requested if slug in by_slug))
+
+    requested = [
+        slug.strip()
+        for slug in players.split(",")
+        if slug.strip()
+    ]
+
+    selected_slugs = list(
+        dict.fromkeys(
+            slug for slug in requested
+            if slug in by_slug
+        )
+    )
+
     if not players:
         selected_slugs = ["tyler-toney", "coby-cotton"]
-    selected = [by_slug[slug] for slug in selected_slugs] if 2 <= len(selected_slugs) <= 5 else []
-    metrics = [
+
+    selected = (
+        [by_slug[slug] for slug in selected_slugs]
+        if 2 <= len(selected_slugs) <= 5
+        else []
+    )
+
+    # ------------------------------------------
+    # Battle Statistics
+    # ------------------------------------------
+
+    battle_metrics = [
         ("appearances", "Battle appearances", "count"),
         ("individual_wins", "Individual wins", "count"),
         ("team_wins", "Team wins", "count"),
         ("total_wins", "Unique battles won", "count"),
         ("win_percentage", "Win rate", "percent"),
     ]
+
+    # ------------------------------------------
+    # Wheel Hosting Statistics
+    # ------------------------------------------
+
+    wheel_metrics = [
+        ("wheel_times_selected", "Times selected by the wheel", "count"),
+        ("wheel_events_hosted", "Wheel events hosted", "count"),
+        ("wheel_episodes_hosted", "Wheel episodes hosted", "count"),
+        ("wheel_unfortunate_hosted", "Wheel Unfortunate events hosted", "count"),
+        ("wheel_variants_hosted", "Wheel Fortunate events hosted", "count"),
+    ]
+
+    cool_not_cool_metrics = [
+        ("cnc_items_presented", "Items presented", "count"),
+        ("cnc_super_cool_items", "Super Cool items", "count"),
+        ("cnc_super_not_cool_items", "Super Not Cool items", "count"),
+        ("cnc_cool_majority_items", "Cool-majority items", "count"),
+        ("cnc_not_cool_majority_items", "Not Cool-majority items", "count"),
+        ("cnc_cool_votes_received", "Cool votes received", "count"),
+        ("cnc_not_cool_votes_received", "Not Cool votes received", "count"),
+        ("cnc_cool_votes_cast", "Cool votes cast", "count"),
+        ("cnc_not_cool_votes_cast", "Not Cool votes cast", "count"),
+    ]
+
+    # ------------------------------------------
+    # Betcha Statistics
+    # ------------------------------------------
+
+    betcha_metrics = [
+        ("betcha_challenges_presented", "Challenges presented", "count"),
+        ("betcha_successful_challenges", "Successful challenges", "count"),
+        ("betcha_failed_challenges", "Failed challenges", "count"),
+        ("betcha_success_rate", "Challenge success rate", "percent"),
+        ("betcha_predictions_made", "Predictions made", "count"),
+        ("betcha_correct_predictions", "Correct predictions", "count"),
+        ("betcha_incorrect_predictions", "Incorrect predictions", "count"),
+        ("betcha_prediction_accuracy", "Prediction accuracy", "percent"),
+        ("betcha_agree_predictions", "Agree predictions", "count"),
+        ("betcha_disagree_predictions", "Disagree predictions", "count"),
+    ]
+
+    get_crafty_metrics = [
+        ("get_crafty_segment_appearances", "Segment appearances", "count"),
+        ("get_crafty_challenges_participated", "Challenges participated", "count"),
+        ("get_crafty_completed_challenges", "Completed challenges", "count"),
+        ("get_crafty_challenges_won", "Challenges won", "count"),
+        ("get_crafty_challenges_lost", "Challenges lost", "count"),
+        ("get_crafty_win_rate", "Win rate", "percent"),
+        ("get_crafty_second_place", "Second-place finishes", "count"),
+        ("get_crafty_third_place", "Third-place finishes", "count"),
+        ("get_crafty_podium_finishes", "Podium finishes", "count"),
+        ("get_crafty_average_placement", "Average placement", "decimal"),
+    ]
+
+    # ------------------------------------------
+    # Statistical Leaders
+    # ------------------------------------------
+
+    all_metrics = (
+        battle_metrics
+        + wheel_metrics
+        + cool_not_cool_metrics
+        + betcha_metrics
+        + get_crafty_metrics
+    )
+
     leaders = {
-        key: max((p[key] for p in selected), default=None)
-        for key, _, _ in metrics
+        key: max(
+            (p[key] for p in selected),
+            default=None
+        )
+        for key, _, _ in all_metrics
     }
+
     return render(request, "players/head_to_head.html", {
         "all_players": all_players,
+        "cool_not_cool_metrics": cool_not_cool_metrics,
         "selected": selected,
         "selected_slugs": selected_slugs,
-        "metrics": metrics,
+        "battle_metrics": battle_metrics,
+        "wheel_metrics": wheel_metrics,
+        "betcha_metrics": betcha_metrics,
+        "get_crafty_metrics": get_crafty_metrics,
         "leaders": leaders,
         "selection_error": bool(players) and not selected,
     })
